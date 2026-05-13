@@ -1,0 +1,2129 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="dark light" />
+  <title>乐谱查看器</title>
+  <style>
+    :root {
+      --line: rgba(255, 255, 255, 0.14);
+      --text: #f5f7ff;
+      --muted: rgba(245, 247, 255, 0.72);
+      --accent: #8cc8ff;
+      --danger: #ff9aa8;
+      --shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+      --radius: 22px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      color: var(--text);
+      background: radial-gradient(120% 90% at 50% 0%, #36405f 0%, #171b2d 42%, #0f1220 100%);
+      font-family: "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      overflow: hidden;
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+    }
+
+    .app {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      padding: 16px;
+      transition: padding 0.28s ease;
+    }
+
+    .shell {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 28px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.04));
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      backdrop-filter: blur(18px);
+      transition: border-radius 0.28s ease, border-color 0.28s ease;
+    }
+
+    .shell:fullscreen,
+    .shell:-webkit-full-screen {
+      border-radius: 0;
+      border-color: transparent;
+    }
+
+    .shell:fullscreen .app,
+    .shell:-webkit-full-screen .app {
+      padding: 0;
+    }
+
+    .shell.dragover {
+      outline: 2px solid rgba(140, 200, 255, 0.8);
+      outline-offset: -2px;
+    }
+
+    .topbar {
+      position: absolute;
+      left: 16px;
+      right: 16px;
+      top: 16px;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 11px 14px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 20px;
+      background: linear-gradient(180deg, rgba(16, 20, 34, 0.58), rgba(16, 20, 34, 0.36));
+      backdrop-filter: blur(24px) saturate(145%);
+      -webkit-backdrop-filter: blur(24px) saturate(145%);
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.22);
+      transition: transform 0.28s ease, opacity 0.28s ease, background 0.28s ease;
+    }
+
+    .topbar.ui-hidden {
+      opacity: 0;
+      transform: translateY(-18px);
+      pointer-events: none;
+    }
+
+    .brand {
+      min-width: 0;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      white-space: nowrap;
+    }
+
+    .brand p {
+      margin: 4px 0 0;
+      font-size: 12px;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: min(44vw, 620px);
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      min-width: 0;
+    }
+
+    .toolbar-left {
+      justify-content: flex-start;
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+
+    .toolbar-right {
+      justify-content: flex-end;
+      flex: 0 0 auto;
+    }
+
+    .page-jump {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      flex: 0 0 auto;
+    }
+
+    .page-jump .field {
+      width: 58px;
+    }
+
+    .page-jump .btn {
+      width: auto;
+      padding: 0 10px;
+    }
+
+    .btn,
+    .field,
+    .select {
+      height: 38px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text);
+      white-space: nowrap;
+      transition: transform 0.18s ease, background 0.18s ease, border-color 0.18s ease, opacity 0.18s ease;
+    }
+
+    .btn:hover,
+    .field:hover,
+    .select:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.24);
+    }
+
+    .btn {
+      padding: 0 14px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      user-select: none;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .btn:active {
+      transform: translateY(1px);
+    }
+
+    .btn.primary {
+      background: linear-gradient(135deg, rgba(140, 200, 255, 0.22), rgba(155, 231, 196, 0.18));
+      border-color: rgba(140, 200, 255, 0.28);
+    }
+
+    .btn[disabled] {
+      opacity: 0.45;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .file-input {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      border: 0;
+    }
+
+    .select,
+    .field {
+      padding: 0 12px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .field {
+      width: 92px;
+      text-align: center;
+    }
+
+    .stage {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 0;
+      transition: padding 0.28s ease;
+    }
+
+    .shell:fullscreen .stage,
+    .shell:-webkit-full-screen .stage {
+      padding: 0;
+    }
+
+    .stage-inner {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      border: none;
+      border-radius: 0;
+      background: rgba(0, 0, 0, 0.18);
+      overflow: hidden;
+      display: grid;
+      place-items: center;
+      touch-action: none;
+      transition: border-radius 0.28s ease, background 0.28s ease;
+    }
+
+    .shell:fullscreen .stage-inner,
+    .shell:-webkit-full-screen .stage-inner {
+      border-radius: 0;
+    }
+
+    .edge-hit {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 22%;
+      z-index: 8;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      tap-highlight-color: transparent;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .edge-hit.left {
+      left: 0;
+      background: transparent;
+    }
+
+    .edge-hit.right {
+      right: 0;
+      background: transparent;
+    }
+
+    .empty {
+      width: min(820px, calc(100% - 32px));
+      text-align: center;
+      padding: 32px 24px;
+      z-index: 6;
+    }
+
+    .empty .title {
+      margin: 0;
+      font-size: clamp(22px, 3vw, 34px);
+      font-weight: 800;
+      letter-spacing: 0.02em;
+    }
+
+    .empty .desc {
+      margin: 16px auto 0;
+      max-width: 52ch;
+      color: var(--muted);
+      line-height: 1.65;
+      font-size: 14px;
+    }
+
+    .empty .hint {
+      margin-top: 18px;
+      color: var(--accent);
+      font-size: 13px;
+    }
+
+    .page-back,
+    .page-layer,
+    .page-media,
+    .flip-overlay {
+      position: absolute;
+      inset: 0;
+    }
+
+    .page-back {
+      z-index: 4;
+      display: grid;
+      place-items: center;
+      will-change: transform, opacity;
+      padding: 0;
+      transform: translateZ(0);
+      backface-visibility: hidden;
+      contain: paint;
+      pointer-events: none;
+    }
+
+    .page-back .page-media {
+      opacity: 0.98;
+    }
+
+    .page-layer {
+      z-index: 5;
+      display: grid;
+      place-items: center;
+      will-change: transform, opacity;
+      padding: 0;
+      transform: translateZ(0);
+      backface-visibility: hidden;
+      contain: paint;
+    }
+
+    .page-media {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      user-select: none;
+      background: transparent;
+      pointer-events: none;
+      transform-origin: center center;
+      will-change: transform;
+      transform: translateZ(0);
+      backface-visibility: hidden;
+      cursor: grab;
+    }
+
+    .flip-overlay {
+      z-index: 9;
+      pointer-events: none;
+      display: grid;
+      place-items: center;
+      will-change: transform, opacity;
+      padding: 0;
+      transform: translateZ(0);
+      backface-visibility: hidden;
+      contain: paint;
+    }
+
+    .flip-overlay img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      pointer-events: none;
+      transform: translateZ(0);
+      backface-visibility: hidden;
+    }
+
+    .page-back,
+    .page-layer,
+    .edge-hit {
+      -webkit-tap-highlight-color: transparent;
+      tap-highlight-color: transparent;
+    }
+
+    @keyframes flip-out-next {
+      from {
+        opacity: 1;
+        transform: translate3d(0, 0, 0) scale(1);
+      }
+
+      to {
+        opacity: 0;
+        transform: translate3d(-100%, 0, 0) scale(1);
+      }
+    }
+
+    @keyframes flip-out-prev {
+      from {
+        opacity: 1;
+        transform: translate3d(0, 0, 0) scale(1);
+      }
+
+      to {
+        opacity: 0;
+        transform: translate3d(100%, 0, 0) scale(1);
+      }
+    }
+
+    @keyframes page-in-next {
+      from {
+        opacity: 1;
+        transform: translate3d(0, 0, 0) scale(1);
+        filter: brightness(0.7);
+      }
+
+      to {
+        opacity: 1;
+        transform: translate3d(0, 0, 0) scale(1);
+        filter: brightness(1);
+      }
+    }
+
+    @keyframes page-in-prev {
+      from {
+        opacity: 1;
+        transform: translate3d(0, 0, 0) scale(1);
+        filter: brightness(0.7);
+      }
+
+      to {
+        opacity: 1;
+        transform: translate3d(0, 0, 0) scale(1);
+        filter: brightness(1);
+      }
+    }
+
+    .flip-next {
+      animation: flip-out-next 160ms linear forwards;
+    }
+
+    .flip-prev {
+      animation: flip-out-prev 160ms linear forwards;
+    }
+
+    .incoming-next {
+      animation: page-in-next 160ms linear;
+    }
+
+    .incoming-prev {
+      animation: page-in-prev 160ms linear;
+    }
+
+    .overlay {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      display: grid;
+      place-items: center;
+      background: rgba(0, 0, 0, 0.18);
+      z-index: 12;
+    }
+
+    .thumbnail-shade {
+      position: absolute;
+      inset: 0;
+      z-index: 13;
+      background: rgba(5, 8, 14, 0.36);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.18s ease;
+    }
+
+    .thumbnail-shade.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .thumbnail-panel {
+      position: absolute;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: min(410px, 42vw);
+      z-index: 14;
+      display: flex;
+      justify-content: flex-end;
+      pointer-events: none;
+      transform: translateX(18px);
+      opacity: 0;
+      transition: transform 0.22s ease, opacity 0.22s ease;
+      contain: layout paint;
+    }
+
+    .thumbnail-panel.open {
+      transform: translateX(0);
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .thumbnail-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      background: linear-gradient(180deg, rgba(15, 18, 28, 0.94), rgba(10, 13, 21, 0.92));
+      border-left: 1px solid rgba(255, 255, 255, 0.1);
+      overflow: hidden;
+    }
+
+    .thumbnail-close {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      z-index: 1;
+      width: 34px;
+      height: 34px;
+      border: 0;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    .thumbnail-grid {
+      flex: 1;
+      overflow: auto;
+      padding: 56px 12px 14px;
+      display: grid;
+      gap: 8px 8px;
+      align-content: start;
+      scrollbar-width: thin;
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
+      touch-action: pan-y;
+    }
+
+    .thumbnail-item {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 0;
+      cursor: pointer;
+      border-radius: 12px;
+      padding: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.03);
+      transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+    }
+
+    .thumbnail-item:hover {
+      transform: translateY(-1px);
+      border-color: rgba(255, 255, 255, 0.18);
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .thumbnail-item.current {
+      border-color: rgba(140, 200, 255, 0.45);
+      background: rgba(140, 200, 255, 0.08);
+    }
+
+    .thumbnail-thumb {
+      width: 100%;
+      aspect-ratio: 3 / 4;
+      border-radius: 8px;
+      object-fit: contain;
+      background: rgba(0, 0, 0, 0.18);
+      display: block;
+    }
+
+    .thumbnail-page {
+      color: rgba(245, 247, 255, 0.82);
+      font-size: 12px;
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: 3px solid rgba(255, 255, 255, 0.18);
+      border-top-color: var(--accent);
+      animation: spin 0.9s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .footer {
+      position: absolute;
+      left: 50%;
+      bottom: 18px;
+      transform: translateX(-50%);
+      z-index: 20;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(0, 0, 0, 0.32);
+      color: rgba(245, 247, 255, 0.92);
+      font-size: 12px;
+      max-width: calc(100% - 32px);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      transition: transform 0.28s ease, opacity 0.28s ease;
+    }
+
+    .footer.ui-hidden {
+      opacity: 0;
+      transform: translate(-50%, 16px);
+      pointer-events: none;
+    }
+
+    .stage-inner,
+    .edge-hit {
+      -webkit-tap-highlight-color: transparent;
+      tap-highlight-color: transparent;
+    }
+
+    .status.error {
+      color: var(--danger);
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    @media (max-width: 860px) {
+      .topbar {
+        left: 10px;
+        right: 10px;
+        top: 10px;
+        gap: 10px;
+        padding: 10px 12px;
+        border-radius: 18px;
+      }
+
+      .topbar {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .toolbar {
+        justify-content: flex-start;
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding-bottom: 2px;
+        scrollbar-width: none;
+      }
+
+      .toolbar::-webkit-scrollbar {
+        display: none;
+      }
+
+      .brand p {
+        max-width: 100%;
+      }
+
+      .stage {
+        padding: 0;
+      }
+
+      .shell:fullscreen .stage,
+      .shell:-webkit-full-screen .stage {
+        padding: 0;
+      }
+
+      .btn,
+      .field,
+      .select {
+        height: 34px;
+      }
+
+      .btn {
+        padding: 0 12px;
+      }
+
+      .field {
+        width: 76px;
+      }
+
+      .page-jump {
+        width: 118px;
+        flex-basis: 118px;
+      }
+
+      .page-jump .field {
+        width: 54px;
+      }
+
+      .page-jump .btn {
+        width: 50px;
+      }
+
+      .brand h1 {
+        font-size: 14px;
+      }
+
+      .brand p {
+        font-size: 11px;
+      }
+
+      .empty {
+        width: calc(100% - 20px);
+        padding: 24px 16px;
+      }
+
+      .empty .title {
+        font-size: clamp(20px, 7vw, 30px);
+      }
+
+      .empty .desc {
+        font-size: 13px;
+      }
+
+      .footer {
+        bottom: 12px;
+        font-size: 11px;
+        max-width: calc(100% - 20px);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="shell" class="shell" tabindex="0" aria-label="乐谱查看器">
+    <header id="topbar" class="topbar">
+      <div class="brand">
+        <h1>乐谱查看器</h1>
+        <p id="fileName">未加载文件</p>
+      </div>
+
+      <div class="toolbar toolbar-left">
+        <label class="btn primary" for="fileInput">上传文件</label>
+        <input id="fileInput" class="file-input" type="file" accept="image/*,application/pdf" multiple />
+
+        <div class="page-jump">
+          <input id="pageInput" class="field" type="number" min="1" step="1" value="1" aria-label="页码" disabled />
+          <button id="pageJumpBtn" class="btn" type="button" disabled>跳转</button>
+        </div>
+      </div>
+
+      <div class="toolbar toolbar-right">
+        <button id="thumbnailBtn" class="btn" type="button" aria-label="显示缩略图">📋</button>
+        <button id="fullscreenBtn" class="btn" type="button">全屏</button>
+        <button id="resetBtn" class="btn" type="button">清空</button>
+      </div>
+    </header>
+
+    <main class="stage">
+      <section id="stageInner" class="stage-inner">
+        <div class="edge-hit left" id="leftEdge" aria-label="上一页"></div>
+        <div class="edge-hit right" id="rightEdge" aria-label="下一页"></div>
+
+        <div id="emptyState" class="empty">
+          <p class="title">把图片或 PDF 拖到这里</p>
+          <p class="desc">
+            统一单页阅读引擎：图片和 PDF 都会渲染为同一种页面视觉。
+            支持点击左右边缘翻页、左右滑动翻页，并保持舞台不超出显示区域。
+          </p>
+          <p class="hint">支持一次导入多张图片，按文件名顺序作为同一首曲子阅读。</p>
+        </div>
+
+        <div id="backPageLayer" class="page-back hidden" aria-hidden="true">
+          <img id="backPageImage" class="page-media hidden" alt="下一页预览" draggable="false" />
+        </div>
+
+        <div id="pageLayer" class="page-layer hidden">
+          <img id="pageImage" class="page-media hidden" alt="乐谱页面" draggable="false" />
+        </div>
+
+        <div id="flipOverlay" class="flip-overlay hidden"></div>
+
+        <div id="loadingOverlay" class="overlay hidden" aria-hidden="true">
+          <div class="spinner"></div>
+        </div>
+
+        <div id="thumbnailShade" class="thumbnail-shade hidden" aria-hidden="true"></div>
+
+        <div id="thumbnailPanel" class="thumbnail-panel hidden" aria-hidden="true">
+          <div class="thumbnail-container">
+            <button class="thumbnail-close" aria-label="关闭缩略图">✕</button>
+            <div id="thumbnailGrid" class="thumbnail-grid"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <div id="footer" class="footer">等待上传文件</div>
+  </div>
+
+  <script type="module">
+    import * as pdfjsLib from './vendor/pdfjs/pdf.min.js';
+
+    // 指定本地 worker 文件
+    pdfjsLib.GlobalWorkerOptions.workerSrc = './vendor/pdfjs/pdf.worker.min.js';
+
+    const shell = document.getElementById('shell');
+    const topbar = document.getElementById('topbar');
+    const stageInner = document.getElementById('stageInner');
+    const leftEdge = document.getElementById('leftEdge');
+    const rightEdge = document.getElementById('rightEdge');
+    const emptyState = document.getElementById('emptyState');
+    const backPageLayer = document.getElementById('backPageLayer');
+    const backPageImage = document.getElementById('backPageImage');
+    const pageLayer = document.getElementById('pageLayer');
+    const pageImage = document.getElementById('pageImage');
+    const flipOverlay = document.getElementById('flipOverlay');
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    const thumbnailShade = document.getElementById('thumbnailShade');
+    const thumbnailPanel = document.getElementById('thumbnailPanel');
+    const thumbnailGrid = document.getElementById('thumbnailGrid');
+    const fileInput = document.getElementById('fileInput');
+    const fileName = document.getElementById('fileName');
+    const pageInput = document.getElementById('pageInput');
+    const pageJumpBtn = document.getElementById('pageJumpBtn');
+    const thumbnailBtn = document.getElementById('thumbnailBtn');
+    const fullscreenBtn = document.getElementById('fullscreenBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const footer = document.getElementById('footer');
+
+    const state = {
+      mode: 'idle',
+      dragOver: false,
+      objectUrls: [],
+      imagePages: [],
+      pdfDoc: null,
+      pdfCache: new Map(),
+      pdfRenderToken: 0,
+      title: '',
+      currentPage: 1,
+      pageCount: 0,
+      zoom: 1,
+      panX: 0,
+      panY: 0,
+      pdfCacheVersion: 0,
+      zoomRerenderTimer: 0,
+      pointers: new Map(),
+      gesture: null,
+      uiHidden: false,
+      isAnimating: false,
+      pointerEventActive: false,
+      mouseFallbackActive: false,
+      centerTapAt: 0,
+      swipeActive: false,
+      swipeDx: 0,
+      previewDirection: null,
+      backPreviewToken: 0,
+      thumbnailPanelOpen: false,
+      thumbnailCache: new Map(),
+      thumbnailRenderToken: 0,
+    };
+
+    const MIN_ZOOM = 0.75;
+    const MAX_ZOOM = 3;
+    const ZOOM_STEP = 0.12;
+
+    const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+
+    const getPdfCacheKeyInfo = (pageNumber) => {
+      const { width, height } = getRenderSize();
+      const ratio = Math.max(1, window.devicePixelRatio || 1);
+      return {
+        width,
+        height,
+        ratio,
+        key: `${pageNumber}|${width}|${height}|${state.zoom.toFixed(2)}|${ratio.toFixed(2)}`,
+      };
+    };
+
+    const clampPan = () => {
+      const { width, height } = getRenderSize();
+      const limitX = Math.max(0, ((state.zoom - 1) * width) / 2);
+      const limitY = Math.max(0, ((state.zoom - 1) * height) / 2);
+      state.panX = clamp(state.panX, -limitX, limitX);
+      state.panY = clamp(state.panY, -limitY, limitY);
+    };
+
+    const applyPageTransform = () => {
+      pageImage.style.transform = `translate3d(${state.panX}px, ${state.panY}px, 0) scale(${state.zoom})`;
+      backPageImage.style.transform = `translate3d(0, 0, 0) scale(${state.zoom})`;
+    };
+
+    const schedulePdfZoomRender = () => {
+      if (state.mode !== 'pdf') return;
+
+      window.clearTimeout(state.zoomRerenderTimer);
+      state.zoomRerenderTimer = window.setTimeout(() => {
+        state.zoomRerenderTimer = 0;
+        void renderCurrentPage({ showLoading: false });
+      }, 140);
+    };
+
+    const setZoomLevel = (nextZoom, anchor = null) => {
+      const previousZoom = state.zoom;
+      const clampedZoom = clamp(nextZoom, MIN_ZOOM, MAX_ZOOM);
+
+      if (Math.abs(clampedZoom - previousZoom) < 0.0001) {
+        return;
+      }
+
+      if (anchor) {
+        const rect = stageInner.getBoundingClientRect();
+        const anchorX = anchor.x - rect.left - rect.width / 2;
+        const anchorY = anchor.y - rect.top - rect.height / 2;
+        const scaleRatio = clampedZoom / previousZoom;
+        state.panX = anchorX - (anchorX - state.panX) * scaleRatio;
+        state.panY = anchorY - (anchorY - state.panY) * scaleRatio;
+      }
+
+      state.zoom = clampedZoom;
+      clampPan();
+      applyPageTransform();
+
+      if (state.mode === 'pdf') {
+        schedulePdfZoomRender();
+      }
+
+      setFooter(`缩放：${Math.round(state.zoom * 100)}%`);
+    };
+
+    const resetZoomAndPan = () => {
+      state.centerTapAt = 0;
+      state.panX = 0;
+      state.panY = 0;
+      setZoomLevel(1);
+    };
+
+    const setLoading = (value) => {
+      loadingOverlay.classList.toggle('hidden', !value);
+    };
+
+    const setFooter = (text, isError = false) => {
+      footer.textContent = text;
+      footer.classList.toggle('status', true);
+      footer.classList.toggle('error', isError);
+    };
+
+    const hideUI = (value) => {
+      state.uiHidden = value;
+      topbar.classList.toggle('ui-hidden', value);
+      footer.classList.toggle('ui-hidden', value);
+      state.gesture = null;
+      state.pointers.clear();
+      state.pointerEventActive = false;
+      state.mouseFallbackActive = false;
+      state.swipeActive = false;
+      state.swipeDx = 0;
+      state.previewDirection = null;
+    };
+
+    const revokeAllUrls = () => {
+      state.objectUrls.forEach((url) => URL.revokeObjectURL(url));
+      state.objectUrls = [];
+    };
+
+    const clearPdfCache = () => {
+      state.pdfCacheVersion += 1;
+      state.pdfCache.forEach((url) => URL.revokeObjectURL(url));
+      state.pdfCache.clear();
+    };
+
+    const updateTopStatus = () => {
+      const hasContent = state.mode !== 'idle';
+
+      if (!hasContent) {
+        fileName.textContent = '未加载文件';
+        pageInput.disabled = true;
+        pageJumpBtn.disabled = true;
+        pageInput.value = '1';
+        fullscreenBtn.textContent = document.fullscreenElement ? '退出全屏' : '全屏';
+        return;
+      }
+
+      fileName.textContent = state.title;
+      pageInput.disabled = false;
+      pageJumpBtn.disabled = false;
+      pageInput.value = String(state.currentPage);
+
+      fullscreenBtn.textContent = document.fullscreenElement ? '退出全屏' : '全屏';
+    };
+
+    const showEmpty = () => {
+      emptyState.classList.remove('hidden');
+      backPageLayer.classList.add('hidden');
+      backPageImage.classList.add('hidden');
+      pageLayer.classList.add('hidden');
+      pageImage.classList.add('hidden');
+    };
+
+    const showPageLayer = () => {
+      emptyState.classList.add('hidden');
+      backPageLayer.classList.remove('hidden');
+      backPageImage.classList.remove('hidden');
+      pageLayer.classList.remove('hidden');
+      pageImage.classList.remove('hidden');
+    };
+
+    const hideBackPageLayer = () => {
+      backPageLayer.classList.add('hidden');
+      backPageImage.classList.add('hidden');
+      backPageImage.removeAttribute('src');
+    };
+
+    const getRenderSize = () => {
+      const rect = stageInner.getBoundingClientRect();
+      return {
+        width: Math.max(1, Math.floor(rect.width - 8)),
+        height: Math.max(1, Math.floor(rect.height - 8)),
+      };
+    };
+
+    const renderPdfPageToUrl = async (pageNumber, cacheInfo = getPdfCacheKeyInfo(pageNumber)) => {
+      if (!state.pdfDoc) return null;
+
+      const version = state.pdfCacheVersion;
+      const cached = state.pdfCache.get(cacheInfo.key);
+      if (cached) return cached;
+
+      const page = await state.pdfDoc.getPage(pageNumber);
+      const baseViewport = page.getViewport({ scale: 1 });
+      const fitScale = Math.min(cacheInfo.width / baseViewport.width, cacheInfo.height / baseViewport.height);
+      const renderScale = Math.max(0.2, fitScale * state.zoom * cacheInfo.ratio);
+      const viewport = page.getViewport({ scale: renderScale });
+
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d', { alpha: false });
+      if (!context) return null;
+
+      canvas.width = Math.max(1, Math.floor(viewport.width));
+      canvas.height = Math.max(1, Math.floor(viewport.height));
+
+      await page.render({ canvas, canvasContext: context, viewport }).promise;
+
+      const blob = await new Promise((resolve) => {
+        canvas.toBlob((result) => resolve(result), 'image/jpeg', 0.94);
+      });
+      if (!blob) return null;
+
+      const pageUrl = URL.createObjectURL(blob);
+      if (version !== state.pdfCacheVersion) {
+        URL.revokeObjectURL(pageUrl);
+        return null;
+      }
+
+      state.pdfCache.set(cacheInfo.key, pageUrl);
+      state.objectUrls.push(pageUrl);
+      return pageUrl;
+    };
+
+    const prefetchPdfWindow = async (centerPage) => {
+      if (state.mode !== 'pdf' || !state.pdfDoc) return;
+
+      const pages = [];
+      for (let offset = 1; offset <= 2; offset += 1) {
+        pages.push(centerPage - offset, centerPage + offset);
+      }
+
+      for (const pageNumber of pages) {
+        if (state.mode !== 'pdf' || !state.pdfDoc) return;
+        if (pageNumber < 1 || pageNumber > state.pageCount || pageNumber === state.currentPage) continue;
+
+        const cacheInfo = getPdfCacheKeyInfo(pageNumber);
+        if (state.pdfCache.has(cacheInfo.key)) continue;
+
+        await renderPdfPageToUrl(pageNumber, cacheInfo);
+      }
+    };
+
+    const renderCurrentPage = async ({ showLoading = true } = {}) => {
+      if (state.mode === 'image') {
+        pageImage.src = state.imagePages[state.currentPage - 1] || '';
+        clampPan();
+        applyPageTransform();
+        const neighborIndex = state.currentPage < state.pageCount ? state.currentPage : state.currentPage - 2;
+        if (neighborIndex >= 0 && neighborIndex < state.imagePages.length) {
+          backPageImage.src = state.imagePages[neighborIndex];
+        } else {
+          hideBackPageLayer();
+        }
+        setFooter(`第 ${state.currentPage} / ${state.pageCount} 页`);
+        void prefetchPdfWindow(state.currentPage);
+        return;
+      }
+
+      if (state.mode === 'pdf') {
+        const token = ++state.pdfRenderToken;
+        const cacheInfo = getPdfCacheKeyInfo(state.currentPage);
+        const cached = state.pdfCache.get(cacheInfo.key);
+
+        if (cached) {
+          pageImage.src = cached;
+          clampPan();
+          applyPageTransform();
+          const neighborPage = state.currentPage < state.pageCount ? state.currentPage + 1 : state.currentPage - 1;
+          if (neighborPage >= 1 && neighborPage <= state.pageCount) {
+            void renderPdfPageToUrl(neighborPage).then((neighborUrl) => {
+              if (neighborUrl && state.mode === 'pdf') {
+                backPageImage.src = neighborUrl;
+              }
+            });
+          } else {
+            hideBackPageLayer();
+          }
+          setFooter(`第 ${state.currentPage} / ${state.pageCount} 页`);
+          void prefetchPdfWindow(state.currentPage);
+          return;
+        }
+
+        if (showLoading) {
+          setLoading(true);
+        }
+
+        try {
+          const url = await renderPdfPageToUrl(state.currentPage, cacheInfo);
+          if (token !== state.pdfRenderToken || !url) return;
+          pageImage.src = url;
+          clampPan();
+          applyPageTransform();
+          const neighborPage = state.currentPage < state.pageCount ? state.currentPage + 1 : state.currentPage - 1;
+          if (neighborPage >= 1 && neighborPage <= state.pageCount) {
+            void renderPdfPageToUrl(neighborPage).then((neighborUrl) => {
+              if (neighborUrl && token === state.pdfRenderToken && state.mode === 'pdf') {
+                backPageImage.src = neighborUrl;
+              }
+            });
+          } else {
+            hideBackPageLayer();
+          }
+          setFooter(`第 ${state.currentPage} / ${state.pageCount} 页`);
+          void prefetchPdfWindow(state.currentPage);
+        } catch (error) {
+          console.error(error);
+          setFooter('PDF 页面渲染失败，请重试', true);
+        } finally {
+          if (showLoading && token === state.pdfRenderToken) setLoading(false);
+        }
+      }
+    };
+
+    const clearIncomingClasses = () => {
+      pageLayer.classList.remove('incoming-next', 'incoming-prev');
+      pageLayer.style.animationDuration = '';
+    };
+
+    const schedulePageRender = (options = {}) => {
+      window.requestAnimationFrame(() => {
+        void renderCurrentPage(options);
+      });
+    };
+
+    const resetPageLayerMotion = () => {
+      pageLayer.style.transition = '';
+      pageLayer.style.transform = '';
+      pageLayer.style.filter = '';
+      pageImage.style.transition = '';
+      pageImage.style.transform = '';
+      state.swipeActive = false;
+      state.swipeDx = 0;
+    };
+
+    const settleSwipeMotion = () => {
+      pageImage.style.transition = '';
+      state.swipeActive = false;
+      state.swipeDx = 0;
+    };
+
+    const setBackPreviewPage = async (pageNumber) => {
+      if (state.mode === 'idle') return;
+      if (pageNumber < 1 || pageNumber > state.pageCount) {
+        hideBackPageLayer();
+        return;
+      }
+
+      if (state.mode === 'image') {
+        backPageImage.src = state.imagePages[pageNumber - 1] || '';
+        return;
+      }
+
+      if (state.mode === 'pdf') {
+        const token = ++state.backPreviewToken;
+        const url = await renderPdfPageToUrl(pageNumber);
+        if (token === state.backPreviewToken && url) {
+          backPageImage.src = url;
+        }
+      }
+    };
+
+    const setSwipePreview = (dx) => {
+      if (state.mode === 'idle' || state.zoom > 1.01 || state.isAnimating) return;
+
+      state.swipeActive = true;
+      state.swipeDx = dx;
+      clearIncomingClasses();
+      const direction = dx < 0 ? 'next' : 'prev';
+      if (state.previewDirection !== direction) {
+        state.previewDirection = direction;
+        void setBackPreviewPage(direction === 'next' ? state.currentPage + 1 : state.currentPage - 1);
+      }
+      pageImage.style.transition = 'none';
+      pageImage.style.transform = `translate3d(${state.panX + dx}px, ${state.panY}px, 0) scale(${state.zoom})`;
+    };
+
+    const animateSwipeBack = () => {
+      if (!state.swipeActive) return;
+
+      const fromX = state.panX + state.swipeDx;
+      pageImage.style.transition = 'none';
+      const animation = pageImage.animate(
+        [
+          { transform: `translate3d(${fromX}px, ${state.panY}px, 0) scale(${state.zoom})` },
+          { transform: `translate3d(${state.panX}px, ${state.panY}px, 0) scale(${state.zoom})` },
+        ],
+        { duration: 120, easing: 'linear' },
+      );
+      animation.onfinish = () => {
+        animation.cancel();
+        applyPageTransform();
+        state.previewDirection = null;
+        settleSwipeMotion();
+      };
+    };
+
+    const animatePageOut = (direction, startOffsetX) => {
+      const width = Math.max(1, Math.floor(stageInner.getBoundingClientRect().width));
+      const targetX = direction === 'next' ? -width : width;
+      const distance = Math.max(0, Math.abs(targetX - startOffsetX));
+      const duration = clamp(Math.round((distance / width) * 170), 90, 170);
+      const fromTransform = `translate3d(${startOffsetX}px, ${state.panY}px, 0) scale(${state.zoom})`;
+      const toTransform = `translate3d(${targetX}px, ${state.panY}px, 0) scale(${state.zoom})`;
+
+      pageImage.style.transition = 'none';
+      pageImage.style.transform = fromTransform;
+      const animation = pageImage.animate(
+        [{ transform: fromTransform, opacity: 1 }, { transform: toTransform, opacity: 0.98 }],
+        { duration, easing: 'linear', fill: 'forwards' },
+      );
+
+      return new Promise((resolve) => {
+        animation.onfinish = () => {
+          pageImage.style.transform = toTransform;
+          animation.cancel();
+          resolve(duration);
+        };
+      });
+    };
+
+    const animateFlip = (direction, startOffsetX = 0) => {
+      if (!pageImage.src) return;
+
+      flipOverlay.innerHTML = '';
+      const shot = document.createElement('img');
+      shot.src = pageImage.src;
+      shot.alt = '翻页过渡';
+      flipOverlay.appendChild(shot);
+
+      const width = Math.max(1, Math.floor(stageInner.getBoundingClientRect().width));
+      const targetX = direction === 'next' ? -width : width;
+      const distance = Math.max(0, Math.abs(targetX - startOffsetX));
+      const duration = clamp(Math.round((distance / width) * 170), 90, 170);
+
+      flipOverlay.classList.remove('hidden', 'flip-next', 'flip-prev');
+      shot.style.transform = `translate3d(${startOffsetX}px, 0, 0)`;
+
+      shot.animate(
+        [
+          { transform: `translate3d(${startOffsetX}px, 0, 0)`, opacity: 1 },
+          { transform: `translate3d(${targetX}px, 0, 0)`, opacity: 0 },
+        ],
+        { duration, easing: 'linear', fill: 'forwards' },
+      );
+
+      window.setTimeout(() => {
+        flipOverlay.classList.add('hidden');
+        flipOverlay.classList.remove('flip-next', 'flip-prev');
+        flipOverlay.innerHTML = '';
+      }, duration + 24);
+      return duration;
+    };
+
+    const goToPage = async (targetPage, direction, startOffsetX = 0) => {
+      if (state.mode === 'idle' || state.isAnimating) return;
+      const nextPage = clamp(targetPage, 1, state.pageCount);
+      if (nextPage === state.currentPage) return;
+
+      state.isAnimating = true;
+      state.previewDirection = direction;
+      void setBackPreviewPage(nextPage);
+      const animationMs = await animatePageOut(direction, startOffsetX);
+      state.currentPage = nextPage;
+      state.panX = 0;
+      state.panY = 0;
+      state.centerTapAt = 0;
+      state.previewDirection = null;
+      settleSwipeMotion();
+      updateTopStatus();
+      schedulePageRender();
+
+      window.setTimeout(() => {
+        state.isAnimating = false;
+        updateTopStatus();
+      }, animationMs + 24);
+    };
+
+    const goToPageInstant = async (targetPage) => {
+      if (state.mode === 'idle' || state.isAnimating) return;
+      const nextPage = clamp(targetPage, 1, state.pageCount);
+      if (nextPage === state.currentPage) return;
+
+      state.isAnimating = true;
+      state.currentPage = nextPage;
+      state.panX = 0;
+      state.panY = 0;
+      state.centerTapAt = 0;
+      state.previewDirection = null;
+      settleSwipeMotion();
+      updateTopStatus();
+      schedulePageRender();
+
+      window.requestAnimationFrame(() => {
+        state.isAnimating = false;
+        updateTopStatus();
+      });
+    };
+
+    const nextPage = () => goToPage(state.currentPage + 1, 'next');
+    const prevPage = () => goToPage(state.currentPage - 1, 'prev');
+
+    const jumpToPage = () => {
+      if (state.mode === 'idle') return;
+      const requested = Math.max(1, Number(pageInput.value || 1));
+      if (requested === state.currentPage) return;
+      void goToPage(requested, requested > state.currentPage ? 'next' : 'prev');
+    };
+
+    const resetViewer = async () => {
+      state.pdfRenderToken++;
+      window.clearTimeout(state.zoomRerenderTimer);
+      state.zoomRerenderTimer = 0;
+      state.centerTapAt = 0;
+
+      if (state.pdfDoc) {
+        await state.pdfDoc.destroy();
+      }
+
+      clearPdfCache();
+      revokeAllUrls();
+      closeThumbnailPanel();
+      state.thumbnailCache.clear();
+
+      state.mode = 'idle';
+      state.imagePages = [];
+      state.pdfDoc = null;
+      state.title = '';
+      state.currentPage = 1;
+      state.pageCount = 0;
+      state.zoom = 1;
+      state.panX = 0;
+      state.panY = 0;
+      state.gesture = null;
+      state.pointers.clear();
+      state.isAnimating = false;
+      state.previewDirection = null;
+      state.backPreviewToken = 0;
+      resetPageLayerMotion();
+
+      pageImage.removeAttribute('src');
+      applyPageTransform();
+      pageLayer.classList.add('hidden');
+      flipOverlay.classList.add('hidden');
+      flipOverlay.innerHTML = '';
+      showEmpty();
+      fileInput.value = '';
+      hideUI(false);
+      setLoading(false);
+      setFooter('等待上传文件');
+      updateTopStatus();
+    };
+
+    const setImageSong = async (files) => {
+      await resetViewer();
+
+      const sorted = files
+        .slice()
+        .sort((a, b) => a.name.localeCompare(b.name, 'zh-CN', { numeric: true }));
+
+      state.imagePages = sorted.map((file) => {
+        const url = URL.createObjectURL(file);
+        state.objectUrls.push(url);
+        return url;
+      });
+
+      state.mode = 'image';
+      state.currentPage = 1;
+      state.pageCount = state.imagePages.length;
+      state.title = state.pageCount > 1 ? `多图曲谱（${state.pageCount} 页）` : sorted[0].name;
+      state.zoom = 1;
+      state.panX = 0;
+      state.panY = 0;
+
+      showPageLayer();
+      await renderCurrentPage();
+      updateTopStatus();
+      setFooter(`已加载图片曲谱，共 ${state.pageCount} 页`);
+    };
+
+    const setPdfSong = async (file) => {
+      await resetViewer();
+
+      const buffer = await file.arrayBuffer();
+      const loadingTask = pdfjsLib.getDocument({ data: buffer });
+      const pdf = await loadingTask.promise;
+
+      state.mode = 'pdf';
+      state.pdfDoc = pdf;
+      state.currentPage = 1;
+      state.pageCount = pdf.numPages;
+      state.title = file.name;
+      state.zoom = 1;
+      state.panX = 0;
+      state.panY = 0;
+
+      showPageLayer();
+      await renderCurrentPage();
+      updateTopStatus();
+      setFooter(`PDF 已加载，共 ${state.pageCount} 页`);
+    };
+
+    const loadFiles = async (rawFiles) => {
+      const files = Array.from(rawFiles || []);
+      if (!files.length) return;
+
+      setLoading(true);
+      setFooter('正在读取文件...');
+
+      const images = files.filter((file) => file.type.startsWith('image/'));
+      const pdfs = files.filter((file) => file.type === 'application/pdf');
+
+      try {
+        if (pdfs.length > 1) {
+          throw new Error('一次仅支持导入 1 个 PDF 文件');
+        }
+
+        if (pdfs.length === 1 && images.length > 0) {
+          throw new Error('请分开导入：图片组和 PDF 不能混合导入');
+        }
+
+        if (images.length === files.length) {
+          await setImageSong(images);
+          return;
+        }
+
+        if (pdfs.length === 1 && files.length === 1) {
+          await setPdfSong(pdfs[0]);
+          return;
+        }
+
+        throw new Error('仅支持图片组或单个 PDF 文件');
+      } catch (error) {
+        const message = error instanceof Error ? error.message : '读取失败';
+        setFooter(message, true);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const handleDrop = (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      shell.classList.remove('dragover');
+      state.dragOver = false;
+      void loadFiles(event.dataTransfer.files);
+    };
+
+    const handleTapZone = (xRatio, pointerType = 'mouse') => {
+      if (state.zoom > 1.01) {
+        if (xRatio > 0.3 && xRatio < 0.7) {
+          const now = performance.now();
+          const windowMs = pointerType === 'mouse' ? 320 : 420;
+          if (now - state.centerTapAt < windowMs) {
+            resetZoomAndPan();
+            return;
+          }
+
+          state.centerTapAt = now;
+        }
+        return;
+      }
+
+      if (xRatio <= 0.3) {
+        void prevPage();
+        return;
+      }
+      if (xRatio >= 0.7) {
+        void nextPage();
+        return;
+      }
+      hideUI(!state.uiHidden);
+    };
+
+    const onDoubleClick = (event) => {
+      if (state.mode === 'idle' || state.zoom <= 1.01) return;
+
+      const rect = stageInner.getBoundingClientRect();
+      const xRatio = (event.clientX - rect.left) / rect.width;
+      if (xRatio > 0.3 && xRatio < 0.7) {
+        event.preventDefault();
+        resetZoomAndPan();
+      }
+    };
+
+    const updatePointer = (event) => {
+      state.pointers.set(event.pointerId, {
+        x: event.clientX,
+        y: event.clientY,
+      });
+    };
+
+    const getPointerPair = () => {
+      const points = Array.from(state.pointers.values());
+      if (points.length < 2) return null;
+      return [points[0], points[1]];
+    };
+
+    const onPointerDown = (event) => {
+      if (event.button !== 0 && event.pointerType === 'mouse') return;
+      if (state.thumbnailPanelOpen && (thumbnailPanel.contains(event.target) || thumbnailShade.contains(event.target))) {
+        return;
+      }
+
+      if (event.pointerType !== 'mouse' && event.preventDefault) {
+        event.preventDefault();
+      }
+
+      state.pointerEventActive = true;
+      updatePointer(event);
+
+      if (state.pointers.size === 1) {
+        state.gesture = {
+          mode: state.zoom > 1.01 ? 'pan' : 'tap',
+          pointerId: event.pointerId,
+          startX: event.clientX,
+          startY: event.clientY,
+          x: event.clientX,
+          y: event.clientY,
+          t: performance.now(),
+          startPanX: state.panX,
+          startPanY: state.panY,
+          moved: false,
+        };
+        return;
+      }
+
+      if (state.pointers.size === 2) {
+        const pair = getPointerPair();
+        if (!pair) return;
+
+        const [first, second] = pair;
+        const dx = second.x - first.x;
+        const dy = second.y - first.y;
+
+        state.gesture = {
+          mode: 'pinch',
+          startZoom: state.zoom,
+          startPanX: state.panX,
+          startPanY: state.panY,
+          startDistance: Math.max(12, Math.hypot(dx, dy)),
+          startCenterX: (first.x + second.x) / 2,
+          startCenterY: (first.y + second.y) / 2,
+        };
+      }
+    };
+
+    const onPointerMove = (event) => {
+      if (!state.pointers.has(event.pointerId)) return;
+
+      if (event.pointerType !== 'mouse' && event.preventDefault) {
+        event.preventDefault();
+      }
+
+      updatePointer(event);
+
+      if (!state.gesture) return;
+
+      if (state.gesture.mode === 'pan') {
+        const current = state.pointers.get(state.gesture.pointerId);
+        if (!current) return;
+
+        state.panX = state.gesture.startPanX + (current.x - state.gesture.startX);
+        state.panY = state.gesture.startPanY + (current.y - state.gesture.startY);
+        clampPan();
+        applyPageTransform();
+        const movedX = Math.abs(current.x - state.gesture.startX);
+        const movedY = Math.abs(current.y - state.gesture.startY);
+        if (movedX > 8 || movedY > 8) {
+          state.gesture.moved = true;
+        }
+        return;
+      }
+
+      if (state.gesture.mode === 'pinch') {
+        const pair = getPointerPair();
+        if (!pair) return;
+
+        const [first, second] = pair;
+        const dx = second.x - first.x;
+        const dy = second.y - first.y;
+        const distance = Math.max(12, Math.hypot(dx, dy));
+        const centerX = (first.x + second.x) / 2;
+        const centerY = (first.y + second.y) / 2;
+        const nextZoom = state.gesture.startZoom * (distance / state.gesture.startDistance);
+
+        state.panX = state.gesture.startPanX;
+        state.panY = state.gesture.startPanY;
+        setZoomLevel(nextZoom, { x: centerX, y: centerY });
+        return;
+      }
+
+      if (state.gesture.mode === 'tap' && state.zoom <= 1.01) {
+        const current = state.pointers.get(state.gesture.pointerId);
+        if (!current) return;
+
+        const dx = current.x - state.gesture.startX;
+        const dy = current.y - state.gesture.startY;
+        const absX = Math.abs(dx);
+        const absY = Math.abs(dy);
+
+        if (absX > 8 && absX > absY * 1.08) {
+          state.gesture.moved = true;
+          setSwipePreview(dx);
+        }
+      }
+    };
+
+    const onPointerUp = (event) => {
+      if (!state.pointers.has(event.pointerId)) return;
+
+      if (event.pointerType !== 'mouse' && event.preventDefault) {
+        event.preventDefault();
+      }
+
+      const finalizePointerState = () => {
+        if (state.pointers.size === 0) {
+          state.pointerEventActive = false;
+        }
+      };
+
+      const currentGesture = state.gesture;
+      state.pointers.delete(event.pointerId);
+
+      if (state.pointers.size === 0) {
+        state.gesture = null;
+      } else if (state.gesture?.mode === 'pinch' && state.pointers.size === 1) {
+        const remaining = Array.from(state.pointers.entries())[0];
+        if (remaining) {
+          state.gesture = {
+            mode: state.zoom > 1.01 ? 'pan' : 'tap',
+            pointerId: remaining[0],
+            startX: remaining[1].x,
+            startY: remaining[1].y,
+            x: remaining[1].x,
+            y: remaining[1].y,
+            t: performance.now(),
+            startPanX: state.panX,
+            startPanY: state.panY,
+            moved: false,
+          };
+        }
+      }
+
+      if (!currentGesture) {
+        if (state.swipeActive) {
+          animateSwipeBack();
+        }
+        finalizePointerState();
+        return;
+      }
+
+      if (currentGesture.mode === 'pinch') {
+        finalizePointerState();
+        return;
+      }
+
+      if (currentGesture.mode === 'pan' && currentGesture.moved) {
+        finalizePointerState();
+        return;
+      }
+
+      const start = currentGesture;
+
+      const dx = event.clientX - start.x;
+      const dy = event.clientY - start.y;
+      const absX = Math.abs(dx);
+      const absY = Math.abs(dy);
+      const dt = performance.now() - start.t;
+      const isTouchLike = event.pointerType !== 'mouse';
+      const tapDistance = isTouchLike ? 24 : 18;
+      const tapDuration = isTouchLike ? 380 : 260;
+
+      if (absX > 54 && absX > absY * 1.25) {
+        const threshold = Math.max(52, Math.floor(stageInner.getBoundingClientRect().width * 0.16));
+
+        if (state.swipeActive) {
+          if (absX >= threshold) {
+            const targetPage = dx < 0 ? state.currentPage + 1 : state.currentPage - 1;
+            if (targetPage < 1 || targetPage > state.pageCount || targetPage === state.currentPage) {
+              animateSwipeBack();
+            } else if (dx < 0) {
+              void goToPage(targetPage, 'next', state.swipeDx);
+            } else {
+              void goToPage(targetPage, 'prev', state.swipeDx);
+            }
+          } else {
+            animateSwipeBack();
+          }
+          finalizePointerState();
+          return;
+        }
+
+        if (dx < 0) {
+          void nextPage();
+        } else {
+          void prevPage();
+        }
+        finalizePointerState();
+        return;
+      }
+
+      if (absY > 54 && absY > absX * 1.25) {
+        if (dy < 0) {
+          void nextPage();
+        } else {
+          void prevPage();
+        }
+        finalizePointerState();
+        return;
+      }
+
+      if (dt < tapDuration && absX < tapDistance && absY < tapDistance) {
+        const rect = stageInner.getBoundingClientRect();
+        const xRatio = (event.clientX - rect.left) / rect.width;
+        handleTapZone(xRatio, event.pointerType);
+      } else if (state.swipeActive) {
+        animateSwipeBack();
+      }
+
+      finalizePointerState();
+    };
+
+    const toMousePointerEvent = (event) => ({
+      pointerId: -1,
+      pointerType: 'mouse',
+      button: event.button ?? 0,
+      clientX: event.clientX,
+      clientY: event.clientY,
+    });
+
+    const onMouseDown = (event) => {
+      if (state.pointerEventActive || event.button !== 0) return;
+      state.mouseFallbackActive = true;
+      onPointerDown(toMousePointerEvent(event));
+    };
+
+    const onMouseMove = (event) => {
+      if (!state.mouseFallbackActive || state.pointerEventActive) return;
+      onPointerMove(toMousePointerEvent(event));
+    };
+
+    const finishMouseFallback = (event) => {
+      if (!state.mouseFallbackActive || state.pointerEventActive) return;
+      onPointerUp(toMousePointerEvent(event));
+      state.mouseFallbackActive = false;
+    };
+
+    const onWheel = (event) => {
+      if (state.mode === 'idle' || state.thumbnailPanelOpen) return;
+
+      event.preventDefault();
+      const delta = event.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP;
+      setZoomLevel(state.zoom + delta, { x: event.clientX, y: event.clientY });
+    };
+
+    const toggleFullscreen = async () => {
+      if (!document.fullscreenElement) {
+        await shell.requestFullscreen();
+      } else {
+        await document.exitFullscreen();
+      }
+      updateTopStatus();
+      if (state.mode === 'pdf') {
+        schedulePageRender({ showLoading: false });
+      }
+    };
+
+    const onResize = () => {
+      if (state.mode === 'pdf') {
+        schedulePageRender({ showLoading: false });
+      }
+    };
+
+    const renderThumbnailPage = async (pageNumber) => {
+      const cacheKey = `thumb|${pageNumber}`;
+      if (state.thumbnailCache.has(cacheKey)) {
+        return state.thumbnailCache.get(cacheKey);
+      }
+
+      let url = null;
+      if (state.mode === 'image') {
+        const sourceUrl = state.imagePages[pageNumber - 1];
+        if (sourceUrl) {
+          try {
+            if ('createImageBitmap' in window) {
+              const blob = await (await fetch(sourceUrl)).blob();
+              const bitmap = await createImageBitmap(blob);
+              const scale = Math.min(160 / bitmap.width, 220 / bitmap.height, 1);
+              const canvas = document.createElement('canvas');
+              canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+              canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+              const ctx = canvas.getContext('2d', { alpha: false });
+              if (ctx) {
+                ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+                url = canvas.toDataURL('image/jpeg', 0.8);
+              }
+            } else {
+              const img = new Image();
+              img.decoding = 'async';
+              img.src = sourceUrl;
+              await new Promise((resolve, reject) => {
+                img.onload = () => resolve();
+                img.onerror = () => reject();
+              });
+              const scale = Math.min(160 / img.width, 220 / img.height, 1);
+              const canvas = document.createElement('canvas');
+              canvas.width = Math.max(1, Math.round(img.width * scale));
+              canvas.height = Math.max(1, Math.round(img.height * scale));
+              const ctx = canvas.getContext('2d', { alpha: false });
+              if (ctx) {
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                url = canvas.toDataURL('image/jpeg', 0.8);
+              }
+            }
+          } catch (error) {
+            url = sourceUrl;
+          }
+        }
+      } else if (state.mode === 'pdf' && state.pdfDoc) {
+        const page = await state.pdfDoc.getPage(pageNumber);
+        const viewport = page.getViewport({ scale: 1 });
+        const thumbScale = Math.min(120 / viewport.width, 160 / viewport.height);
+        const thumbViewport = page.getViewport({ scale: thumbScale });
+
+        const canvas = document.createElement('canvas');
+        canvas.width = thumbViewport.width;
+        canvas.height = thumbViewport.height;
+        const ctx = canvas.getContext('2d', { alpha: false });
+        if (ctx) {
+          await page.render({ canvasContext: ctx, canvas, viewport: thumbViewport }).promise;
+          url = canvas.toDataURL('image/jpeg', 0.85);
+        }
+      }
+
+      if (url) {
+        state.thumbnailCache.set(cacheKey, url);
+      }
+      return url;
+    };
+
+    let thumbnailObserver = null;
+
+    const buildThumbnailGrid = async () => {
+      if (state.mode === 'idle') return;
+
+      thumbnailGrid.innerHTML = '';
+      const count = state.pageCount;
+      const renderToken = ++state.thumbnailRenderToken;
+
+      if (thumbnailObserver) {
+        thumbnailObserver.disconnect();
+      }
+      thumbnailObserver = new IntersectionObserver(
+        (entries) => {
+          for (const entry of entries) {
+            if (!entry.isIntersecting) continue;
+            const item = entry.target;
+            const pageNumber = Number(item.dataset.page || 0);
+            if (!pageNumber || item.dataset.loaded === '1') continue;
+            item.dataset.loaded = '1';
+            const img = item.querySelector('img');
+            if (img) {
+              void renderThumbnailPage(pageNumber).then((url) => {
+                if (renderToken !== state.thumbnailRenderToken) return;
+                if (url) {
+                  img.src = url;
+                  img.style.opacity = '1';
+                }
+              });
+            }
+            thumbnailObserver.unobserve(item);
+          }
+        },
+        { root: thumbnailGrid, rootMargin: '160px 0px', threshold: 0.01 },
+      );
+
+      let colCount = 1;
+      if (count > 4) colCount = 2;
+      if (count > 12) colCount = 3;
+
+      thumbnailGrid.style.gridTemplateColumns = `repeat(${colCount}, minmax(0, 1fr))`;
+
+      for (let i = 1; i <= count; i++) {
+        const item = document.createElement('div');
+        item.className = `thumbnail-item ${i === state.currentPage ? 'current' : ''}`;
+        item.addEventListener('click', () => {
+          if (i !== state.currentPage) {
+            void goToPageInstant(i);
+          }
+          closeThumbnailPanel();
+        });
+
+        item.dataset.page = String(i);
+
+        const img = document.createElement('img');
+        img.className = 'thumbnail-thumb';
+        img.alt = `第 ${i} 页`;
+        img.style.opacity = '0.55';
+
+        const label = document.createElement('div');
+        label.className = 'thumbnail-page';
+        label.textContent = `第 ${i} 页`;
+
+        item.appendChild(img);
+        item.appendChild(label);
+        thumbnailGrid.appendChild(item);
+
+        thumbnailObserver.observe(item);
+      }
+    };
+
+    const openThumbnailPanel = async () => {
+      if (state.mode === 'idle') return;
+      state.thumbnailPanelOpen = true;
+      thumbnailShade.classList.remove('hidden');
+      thumbnailPanel.classList.remove('hidden');
+      thumbnailShade.setAttribute('aria-hidden', 'false');
+      thumbnailPanel.setAttribute('aria-hidden', 'false');
+      thumbnailShade.classList.add('open');
+      thumbnailPanel.classList.add('open');
+      window.requestAnimationFrame(() => {
+        void buildThumbnailGrid();
+      });
+    };
+
+    const closeThumbnailPanel = () => {
+      state.thumbnailPanelOpen = false;
+      state.thumbnailRenderToken += 1;
+      if (thumbnailObserver) {
+        thumbnailObserver.disconnect();
+      }
+      thumbnailShade.classList.remove('open');
+      thumbnailPanel.classList.remove('open');
+      thumbnailShade.setAttribute('aria-hidden', 'true');
+      thumbnailPanel.setAttribute('aria-hidden', 'true');
+      window.setTimeout(() => {
+        if (!state.thumbnailPanelOpen) {
+          thumbnailShade.classList.add('hidden');
+          thumbnailPanel.classList.add('hidden');
+        }
+      }, 240);
+    };
+
+    fileInput.addEventListener('change', (event) => {
+      void loadFiles(event.target.files);
+      fileInput.value = '';
+    });
+
+    pageJumpBtn.addEventListener('click', () => {
+      jumpToPage();
+    });
+
+    shell.addEventListener('dragenter', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (!state.dragOver) {
+        shell.classList.add('dragover');
+        state.dragOver = true;
+      }
+    });
+
+    shell.addEventListener('dragover', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (!state.dragOver) {
+        shell.classList.add('dragover');
+        state.dragOver = true;
+      }
+    });
+
+    shell.addEventListener('dragleave', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (event.target === shell || event.target === stageInner) {
+        shell.classList.remove('dragover');
+        state.dragOver = false;
+      }
+    });
+
+    shell.addEventListener('drop', handleDrop);
+    stageInner.addEventListener('pointerdown', onPointerDown);
+    stageInner.addEventListener('pointerup', onPointerUp);
+    stageInner.addEventListener('pointercancel', onPointerUp);
+    stageInner.addEventListener('mousedown', onMouseDown);
+    stageInner.addEventListener('mousemove', onMouseMove);
+    stageInner.addEventListener('mouseup', finishMouseFallback);
+    stageInner.addEventListener('mouseleave', finishMouseFallback);
+    stageInner.addEventListener('dblclick', onDoubleClick);
+
+    leftEdge.addEventListener('click', () => {
+      void prevPage();
+    });
+
+    rightEdge.addEventListener('click', () => {
+      void nextPage();
+    });
+
+    fullscreenBtn.addEventListener('click', () => {
+      void toggleFullscreen();
+    });
+
+    thumbnailBtn.addEventListener('click', () => {
+      if (state.thumbnailPanelOpen) {
+        closeThumbnailPanel();
+      } else {
+        void openThumbnailPanel();
+      }
+    });
+
+    thumbnailPanel.querySelector('.thumbnail-close')?.addEventListener('click', () => {
+      closeThumbnailPanel();
+    });
+
+    thumbnailShade.addEventListener('click', () => {
+      closeThumbnailPanel();
+    });
+
+    thumbnailGrid.addEventListener('wheel', (event) => {
+      event.stopPropagation();
+    }, { passive: true });
+
+    resetBtn.addEventListener('click', () => {
+      void resetViewer();
+    });
+
+    pageInput.addEventListener('change', () => {
+      jumpToPage();
+    });
+
+    pageInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        jumpToPage();
+      }
+    });
+
+    document.addEventListener('fullscreenchange', updateTopStatus);
+    window.addEventListener('resize', onResize);
+
+    document.addEventListener('keydown', (event) => {
+      if (state.mode === 'idle') return;
+
+      if (event.key === 'ArrowLeft') {
+        void prevPage();
+        return;
+      }
+      if (event.key === 'ArrowRight') {
+        void nextPage();
+        return;
+      }
+      if (event.key === ' ') {
+        event.preventDefault();
+        void nextPage();
+        return;
+      }
+      if (event.key === 'Escape' && document.fullscreenElement) {
+        void document.exitFullscreen();
+        return;
+      }
+      if (event.key === '+' || event.key === '=') {
+        const rect = stageInner.getBoundingClientRect();
+        setZoomLevel(state.zoom + ZOOM_STEP, { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
+        return;
+      }
+      if (event.key === '-' || event.key === '_') {
+        const rect = stageInner.getBoundingClientRect();
+        setZoomLevel(state.zoom - ZOOM_STEP, { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
+      }
+    });
+
+    stageInner.addEventListener('wheel', onWheel, { passive: false });
+    stageInner.addEventListener('pointermove', onPointerMove);
+
+    window.addEventListener('beforeunload', () => {
+      clearPdfCache();
+      revokeAllUrls();
+      if (state.pdfDoc) {
+        void state.pdfDoc.destroy();
+      }
+    });
+
+    void resetViewer();
+  </script>
+</body>
+</html>
+
+
+
