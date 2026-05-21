@@ -686,6 +686,373 @@
       display: none !important;
     }
 
+    .face-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 40;
+      display: grid;
+      place-items: center;
+      padding: 16px;
+      background: rgba(8, 10, 18, 0.72);
+      backdrop-filter: blur(10px);
+    }
+
+    .face-panel {
+      width: min(1200px, 96vw);
+      height: min(90vh, 900px);
+      display: flex;
+      flex-direction: column;
+      border-radius: 22px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: linear-gradient(180deg, rgba(18, 22, 36, 0.96), rgba(14, 18, 30, 0.93));
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .face-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .face-title {
+      font-size: 12px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .face-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .face-pill {
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--muted);
+      transition: all 0.2s ease;
+    }
+
+    .face-pill.on {
+      color: #7cffb0;
+      border-color: rgba(124, 255, 176, 0.4);
+      background: rgba(124, 255, 176, 0.12);
+    }
+
+    .face-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 12px;
+      overflow: auto;
+    }
+
+    .face-top {
+      flex: 1;
+      display: grid;
+      grid-template-columns: minmax(0, 1.3fr) minmax(0, 0.9fr);
+      gap: 12px;
+    }
+
+    .face-bottom {
+      flex: 1;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 12px;
+    }
+
+    .face-preview {
+      position: relative;
+      min-height: 240px;
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: #0a0d18;
+      overflow: hidden;
+    }
+
+    .face-video,
+    .face-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transform: scaleX(-1);
+    }
+
+    .face-canvas {
+      pointer-events: none;
+    }
+
+    .face-placeholder {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      background: rgba(10, 12, 20, 0.8);
+      color: var(--muted);
+      text-align: center;
+      transition: opacity 0.2s ease;
+    }
+
+    .face-placeholder.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .face-section {
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(12, 15, 26, 0.85);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .face-section-header {
+      padding: 10px 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .face-section-body {
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      overflow: auto;
+    }
+
+    .face-action-strip {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .face-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 6px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.04);
+      transition: all 0.2s ease;
+      text-align: center;
+    }
+
+    .face-card .face-emoji {
+      font-size: 20px;
+      opacity: 0.35;
+      filter: grayscale(1);
+      transition: all 0.2s ease;
+    }
+
+    .face-card .face-label {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .face-card .face-score {
+      font-size: 10px;
+      color: var(--muted);
+    }
+
+    .face-card.active-left {
+      border-color: rgba(140, 200, 255, 0.4);
+      background: rgba(140, 200, 255, 0.14);
+    }
+
+    .face-card.active-left .face-emoji {
+      opacity: 1;
+      filter: none;
+    }
+
+    .face-card.active-left .face-label,
+    .face-card.active-left .face-score {
+      color: var(--accent);
+    }
+
+    .face-card.active-right {
+      border-color: rgba(255, 154, 168, 0.42);
+      background: rgba(255, 154, 168, 0.16);
+    }
+
+    .face-card.active-right .face-emoji {
+      opacity: 1;
+      filter: none;
+    }
+
+    .face-card.active-right .face-label,
+    .face-card.active-right .face-score {
+      color: var(--danger);
+    }
+
+    .face-subtitle {
+      margin-top: 6px;
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      padding-top: 10px;
+    }
+
+    .face-bs-group {
+      font-size: 10px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-top: 10px;
+      padding-bottom: 4px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .face-bs-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .face-bs-label {
+      min-width: 64px;
+      white-space: nowrap;
+    }
+
+    .face-bs-track {
+      flex: 1;
+      height: 4px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.08);
+      overflow: hidden;
+    }
+
+    .face-bs-fill {
+      height: 100%;
+      width: 0;
+      border-radius: 999px;
+      transition: width 0.08s ease;
+    }
+
+    .face-bs-fill.l {
+      background: linear-gradient(90deg, #7fb6ff, #9fdcff);
+    }
+
+    .face-bs-fill.r {
+      background: linear-gradient(90deg, #ff91b2, #ffb5c8);
+    }
+
+    .face-bs-fill.b {
+      background: linear-gradient(90deg, #b08cff, #c9b1ff);
+    }
+
+    .face-bs-fill.n {
+      background: linear-gradient(90deg, rgba(245, 247, 255, 0.4), rgba(245, 247, 255, 0.8));
+    }
+
+    .face-bs-value {
+      min-width: 32px;
+      text-align: right;
+      font-size: 10px;
+      color: var(--muted);
+    }
+
+    .face-thr-row {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .face-thr-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .face-section input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 4px;
+      border-radius: 2px;
+      background: rgba(255, 255, 255, 0.08);
+      outline: none;
+    }
+
+    .face-section input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--text);
+      cursor: pointer;
+      border: 2px solid rgba(0, 0, 0, 0.4);
+    }
+
+    .face-fps {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .face-fps-value {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--accent);
+      line-height: 1;
+    }
+
+    .face-debug {
+      font-size: 10px;
+      line-height: 1.6;
+      color: var(--muted);
+    }
+
+    .face-debug-row {
+      display: flex;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      padding: 2px 0;
+    }
+
+    .face-debug-row:last-child {
+      border-bottom: none;
+    }
+
+    @media (max-width: 980px) {
+      .face-top,
+      .face-bottom {
+        grid-template-columns: 1fr;
+      }
+
+      .face-panel {
+        height: 92vh;
+      }
+    }
+
     @media (max-width: 1200px) {
       .topbar {
         left: 12px;
@@ -885,6 +1252,7 @@
       <div class="topbar-spacer"></div>
 
       <button id="thumbnailBtn" class="btn" type="button" aria-label="显示缩略图">📋</button>
+      <button id="faceBtn" class="btn" type="button" aria-label="面部识别设置">👁️</button>
       <button id="fullscreenBtn" class="btn" type="button">全屏</button>
       <button id="resetBtn" class="btn" type="button">清空</button>
     </header>
@@ -928,6 +1296,75 @@
       </div>
     </div>
 
+    <div id="faceOverlay" class="face-overlay hidden" aria-hidden="true">
+      <div class="face-panel" role="dialog" aria-label="面部识别配置">
+        <div class="face-header">
+          <div class="face-title">面部识别</div>
+          <div class="face-header-actions">
+            <span id="faceStatus" class="face-pill">Standby</span>
+            <button id="faceClose" class="btn" type="button" aria-label="关闭面部识别">✕</button>
+          </div>
+        </div>
+        <div class="face-body">
+          <div class="face-top">
+            <div class="face-preview">
+              <video id="faceVideo" class="face-video" autoplay playsinline muted></video>
+              <canvas id="faceCanvas" class="face-canvas"></canvas>
+              <div id="facePlaceholder" class="face-placeholder">
+                <p>需要摄像头权限</p>
+                <button id="faceStartBtn" class="btn primary" type="button">启动识别</button>
+              </div>
+            </div>
+            <div class="face-section">
+              <div class="face-section-header">动作识别</div>
+              <div class="face-section-body">
+                <div class="face-action-strip">
+                  <div class="face-card" id="faceCardWinkL">
+                    <div class="face-emoji">😜</div>
+                    <div class="face-label">左眼 Wink</div>
+                    <div class="face-score" id="faceScoreWinkL">0%</div>
+                  </div>
+                  <div class="face-card" id="faceCardWinkR">
+                    <div class="face-emoji">😉</div>
+                    <div class="face-label">右眼 Wink</div>
+                    <div class="face-score" id="faceScoreWinkR">0%</div>
+                  </div>
+                  <div class="face-card" id="faceCardPuckerL">
+                    <div class="face-emoji">😗</div>
+                    <div class="face-label">向左撅嘴</div>
+                    <div class="face-score" id="faceScorePuckerL">0%</div>
+                  </div>
+                  <div class="face-card" id="faceCardPuckerR">
+                    <div class="face-emoji">😙</div>
+                    <div class="face-label">向右撅嘴</div>
+                    <div class="face-score" id="faceScorePuckerR">0%</div>
+                  </div>
+                </div>
+                <div class="face-subtitle">Blendshape 系数</div>
+                <div id="faceBlendshapePanel"></div>
+              </div>
+            </div>
+          </div>
+          <div class="face-bottom">
+            <div class="face-section">
+              <div class="face-section-header">灵敏度调节</div>
+              <div class="face-section-body" id="faceThresholdPanel"></div>
+            </div>
+            <div class="face-section">
+              <div class="face-section-header">性能与原始值</div>
+              <div class="face-section-body">
+                <div class="face-fps">
+                  <span>FPS</span>
+                  <span id="faceFpsValue" class="face-fps-value">--</span>
+                </div>
+                <div id="faceDebugPanel" class="face-debug"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div id="footer" class="footer">等待上传文件</div>
   </div>
 
@@ -958,9 +1395,29 @@
     const pageCurDisplay = document.getElementById('pageCurDisplay');
     const pageTotalDisplay = document.getElementById('pageTotalDisplay');
     const thumbnailBtn = document.getElementById('thumbnailBtn');
+    const faceBtn = document.getElementById('faceBtn');
     const fullscreenBtn = document.getElementById('fullscreenBtn');
     const resetBtn = document.getElementById('resetBtn');
     const footer = document.getElementById('footer');
+    const faceOverlay = document.getElementById('faceOverlay');
+    const faceClose = document.getElementById('faceClose');
+    const faceStatus = document.getElementById('faceStatus');
+    const faceVideo = document.getElementById('faceVideo');
+    const faceCanvas = document.getElementById('faceCanvas');
+    const facePlaceholder = document.getElementById('facePlaceholder');
+    const faceStartBtn = document.getElementById('faceStartBtn');
+    const faceBlendshapePanel = document.getElementById('faceBlendshapePanel');
+    const faceThresholdPanel = document.getElementById('faceThresholdPanel');
+    const faceDebugPanel = document.getElementById('faceDebugPanel');
+    const faceFpsValue = document.getElementById('faceFpsValue');
+    const faceCardWinkL = document.getElementById('faceCardWinkL');
+    const faceCardWinkR = document.getElementById('faceCardWinkR');
+    const faceCardPuckerL = document.getElementById('faceCardPuckerL');
+    const faceCardPuckerR = document.getElementById('faceCardPuckerR');
+    const faceScoreWinkL = document.getElementById('faceScoreWinkL');
+    const faceScoreWinkR = document.getElementById('faceScoreWinkR');
+    const faceScorePuckerL = document.getElementById('faceScorePuckerL');
+    const faceScorePuckerR = document.getElementById('faceScorePuckerR');
 
     const state = {
       mode: 'idle',
@@ -997,6 +1454,382 @@
     const MIN_ZOOM = 0.75;
     const MAX_ZOOM = 3;
     const ZOOM_STEP = 0.12;
+
+    const FACE_JS_URLS = [
+      'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14',
+      'https://unpkg.com/@mediapipe/tasks-vision@0.10.14',
+    ];
+    const FACE_WASM_URLS = [
+      'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm',
+      'https://unpkg.com/@mediapipe/tasks-vision@0.10.14/wasm',
+    ];
+    const FACE_MODEL_SOURCES = [
+      { url: './models/face_landmarker.task', timeout: 3000 },
+      { url: 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task', timeout: 15000 },
+    ];
+
+    const FACE_BS_GROUPS = [
+      { title: '眼睛', items: [
+        { k: 'eyeBlinkLeft', l: '左眨眼', c: 'l' },
+        { k: 'eyeBlinkRight', l: '右眨眼', c: 'r' },
+        { k: 'eyeWideLeft', l: '左瞪大', c: 'l' },
+        { k: 'eyeWideRight', l: '右瞪大', c: 'r' },
+        { k: 'eyeSquintLeft', l: '左眯眼', c: 'l' },
+        { k: 'eyeSquintRight', l: '右眯眼', c: 'r' },
+      ] },
+      { title: '嘴巴', items: [
+        { k: 'mouthPucker', l: '嘟嘴', c: 'b' },
+        { k: 'mouthFunnel', l: '嘟嘴形', c: 'b' },
+        { k: 'mouthLeft', l: '嘴角左移', c: 'l' },
+        { k: 'mouthRight', l: '嘴角右移', c: 'r' },
+        { k: 'mouthSmileLeft', l: '左微笑', c: 'l' },
+        { k: 'mouthSmileRight', l: '右微笑', c: 'r' },
+        { k: 'mouthOpen', l: '嘴张开', c: 'n' },
+        { k: 'mouthFrownLeft', l: '左撇嘴', c: 'l' },
+        { k: 'mouthFrownRight', l: '右撇嘴', c: 'r' },
+      ] },
+    ];
+
+    const FACE_THRESHOLDS = {
+      blink: { value: 0.35, min: 0.02, max: 0.95, step: 0.01, label: '眨眼阈值' },
+      winkDiff: { value: 0.2, min: 0.02, max: 0.8, step: 0.01, label: 'Wink 差值阈值' },
+      pucker: { value: 0.25, min: 0.02, max: 0.9, step: 0.01, label: '撅嘴阈值' },
+      puckerBias: { value: 0.08, min: 0.01, max: 0.6, step: 0.01, label: '撅嘴偏移阈值' },
+    };
+
+    const FACE_SMOOTH = { eye: { atk: 0.06, rel: 0.4 }, mouth: { atk: 0.18, rel: 0.45 } };
+    const FACE_SMD = 0.5;
+    const FACE_HYST_ATK = 1.0;
+    const FACE_HYST_REL = 0.6;
+
+    const faceState = {
+      landmarker: null,
+      running: false,
+      stream: null,
+      modelUrl: '',
+      lastActionAt: 0,
+      cooldownMs: 800,
+      actionActive: { next: false, prev: false },
+      fpsFrames: 0,
+      fpsTime: performance.now(),
+      sm: {},
+      act: {},
+    };
+
+    const setFaceStatus = (text, live) => {
+      if (!faceStatus) return;
+      faceStatus.textContent = text;
+      faceStatus.classList.toggle('on', Boolean(live));
+    };
+
+    const buildFaceBlendshapePanel = () => {
+      if (!faceBlendshapePanel) return;
+      let html = '';
+      for (const group of FACE_BS_GROUPS) {
+        html += `<div class="face-bs-group">${group.title}</div>`;
+        for (const item of group.items) {
+          html += `
+            <div class="face-bs-row">
+              <span class="face-bs-label">${item.l}</span>
+              <div class="face-bs-track"><div class="face-bs-fill ${item.c}" id="faceBs-${item.k}"></div></div>
+              <span class="face-bs-value" id="faceBv-${item.k}">0%</span>
+            </div>`;
+        }
+      }
+      faceBlendshapePanel.innerHTML = html;
+    };
+
+    const buildFaceThresholdPanel = () => {
+      if (!faceThresholdPanel) return;
+      let html = '';
+      Object.entries(FACE_THRESHOLDS).forEach(([key, cfg]) => {
+        html += `
+          <div class="face-thr-row">
+            <div class="face-thr-head">
+              <label>${cfg.label}</label>
+              <span id="faceTv-${key}">${cfg.value.toFixed(2)}</span>
+            </div>
+            <input type="range" min="${cfg.min}" max="${cfg.max}" step="${cfg.step}" value="${cfg.value}" data-k="${key}">
+          </div>`;
+      });
+      faceThresholdPanel.innerHTML = html;
+      faceThresholdPanel.querySelectorAll('input[type="range"]').forEach((input) => {
+        input.addEventListener('input', () => {
+          const k = input.dataset.k;
+          const cfg = FACE_THRESHOLDS[k];
+          cfg.value = parseFloat(input.value);
+          const label = document.getElementById(`faceTv-${k}`);
+          if (label) label.textContent = cfg.value.toFixed(2);
+        });
+      });
+    };
+
+    const faceValue = (list, name) => {
+      const item = list.find((entry) => entry.categoryName === name || entry.categoryName === `_${name}`);
+      return item ? item.score : 0;
+    };
+
+    const faceEmaAR = (key, raw, profile) => {
+      const p = FACE_SMOOTH[profile];
+      if (faceState.sm[key] === undefined) faceState.sm[key] = raw;
+      const f = raw > faceState.sm[key] ? p.atk : p.rel;
+      faceState.sm[key] = faceState.sm[key] * (1 - f) + raw * f;
+      return faceState.sm[key];
+    };
+
+    const faceEmaD = (key, raw) => {
+      if (faceState.sm[key] === undefined) faceState.sm[key] = raw;
+      faceState.sm[key] = faceState.sm[key] * (1 - FACE_SMD) + raw * FACE_SMD;
+      return faceState.sm[key];
+    };
+
+    const faceHyst = (key, raw, thr) => {
+      const cur = faceState.act[key] || false;
+      if (cur) {
+        if (raw < thr * FACE_HYST_REL) faceState.act[key] = false;
+      } else if (raw >= thr * FACE_HYST_ATK) {
+        faceState.act[key] = true;
+      }
+      return faceState.act[key];
+    };
+
+    const setFaceCard = (card, scoreEl, active, score, side) => {
+      if (!card || !scoreEl) return;
+      card.classList.toggle('active-left', active && side === 'left');
+      card.classList.toggle('active-right', active && side === 'right');
+      scoreEl.textContent = `${Math.round(score * 100)}%`;
+    };
+
+    const updateFaceBlendshapes = (list) => {
+      FACE_BS_GROUPS.forEach((group) => {
+        group.items.forEach((item) => {
+          const v = faceEmaD(`d_${item.k}`, faceValue(list, item.k));
+          const pct = Math.round(v * 100);
+          const fill = document.getElementById(`faceBs-${item.k}`);
+          const val = document.getElementById(`faceBv-${item.k}`);
+          if (fill) fill.style.width = `${pct}%`;
+          if (val) val.textContent = `${pct}%`;
+        });
+      });
+    };
+
+    const updateFaceDebug = (values) => {
+      if (!faceDebugPanel) return;
+      faceDebugPanel.innerHTML = values.map((item) => (
+        `<div class="face-debug-row"><span>${item.label}</span><span>${item.value}</span></div>`
+      )).join('');
+    };
+
+    const maybeTriggerFaceAction = (key, active, action) => {
+      const now = performance.now();
+      if (active && !faceState.actionActive[key] && now - faceState.lastActionAt >= faceState.cooldownMs) {
+        faceState.lastActionAt = now;
+        action();
+      }
+      faceState.actionActive[key] = active;
+    };
+
+    const processFaceBlendshapes = (list) => {
+      const thBlink = FACE_THRESHOLDS.blink.value;
+      const thDiff = FACE_THRESHOLDS.winkDiff.value;
+      const thPuck = FACE_THRESHOLDS.pucker.value;
+      const thBias = FACE_THRESHOLDS.puckerBias.value;
+
+      const eBL = faceEmaAR('eBL', faceValue(list, 'eyeBlinkLeft'), 'eye');
+      const eBR = faceEmaAR('eBR', faceValue(list, 'eyeBlinkRight'), 'eye');
+      const avg = (eBL + eBR) / 2;
+      const diff = Math.abs(eBL - eBR);
+
+      const mP = faceEmaAR('mP', faceValue(list, 'mouthPucker'), 'mouth');
+      const mF = faceEmaAR('mF', faceValue(list, 'mouthFunnel'), 'mouth');
+      const mL = faceEmaAR('mL', faceValue(list, 'mouthLeft'), 'mouth');
+      const mR = faceEmaAR('mR', faceValue(list, 'mouthRight'), 'mouth');
+
+      const isBlink = faceHyst('bl', avg, thBlink) && diff < thDiff;
+      const isLWink = !isBlink && faceHyst('wl', eBL, thBlink) && diff >= thDiff;
+      const isRWink = !isBlink && faceHyst('wr', eBR, thBlink) && diff >= thDiff;
+
+      const puck = Math.max(mP, mF * 0.7);
+      const biasL = mL - mR;
+      const biasR = mR - mL;
+      const isLPuck = faceHyst('lp', puck, thPuck) && biasL >= thBias;
+      const isRPuck = faceHyst('rp', puck, thPuck) && biasR >= thBias;
+
+      const cWL = isLWink ? Math.min(diff / 0.5, 1) : 0;
+      const cWR = isRWink ? Math.min(diff / 0.5, 1) : 0;
+      const cPL = isLPuck ? Math.min((puck * Math.max(biasL, 0)) / 0.25, 1) : 0;
+      const cPR = isRPuck ? Math.min((puck * Math.max(biasR, 0)) / 0.25, 1) : 0;
+
+      setFaceCard(faceCardWinkL, faceScoreWinkL, isLWink, cWL, 'left');
+      setFaceCard(faceCardWinkR, faceScoreWinkR, isRWink, cWR, 'right');
+      setFaceCard(faceCardPuckerL, faceScorePuckerL, isLPuck, cPL, 'left');
+      setFaceCard(faceCardPuckerR, faceScorePuckerR, isRPuck, cPR, 'right');
+
+      maybeTriggerFaceAction('next', isRWink || isLPuck, () => {
+        if (state.mode !== 'idle') void nextPage();
+      });
+      maybeTriggerFaceAction('prev', isLWink || isRPuck, () => {
+        if (state.mode !== 'idle') void prevPage();
+      });
+
+      updateFaceBlendshapes(list);
+      updateFaceDebug([
+        { label: 'eyeBlinkL', value: `${faceValue(list, 'eyeBlinkLeft').toFixed(2)} → ${eBL.toFixed(2)}` },
+        { label: 'eyeBlinkR', value: `${faceValue(list, 'eyeBlinkRight').toFixed(2)} → ${eBR.toFixed(2)}` },
+        { label: 'mouthPucker', value: `${faceValue(list, 'mouthPucker').toFixed(2)} → ${mP.toFixed(2)}` },
+        { label: 'mouthFunnel', value: `${faceValue(list, 'mouthFunnel').toFixed(2)} → ${mF.toFixed(2)}` },
+        { label: 'mouthLeft', value: `${faceValue(list, 'mouthLeft').toFixed(2)} → ${mL.toFixed(2)}` },
+        { label: 'mouthRight', value: `${faceValue(list, 'mouthRight').toFixed(2)} → ${mR.toFixed(2)}` },
+      ]);
+    };
+
+    const updateFaceFps = () => {
+      faceState.fpsFrames += 1;
+      const now = performance.now();
+      if (now - faceState.fpsTime >= 1000) {
+        if (faceFpsValue) faceFpsValue.textContent = String(faceState.fpsFrames);
+        faceState.fpsFrames = 0;
+        faceState.fpsTime = now;
+      }
+    };
+
+    const faceLoop = () => {
+      if (!faceState.running || !faceState.landmarker) return;
+      if (faceVideo && faceVideo.readyState >= 2) {
+        if (faceCanvas) {
+          faceCanvas.width = faceCanvas.clientWidth;
+          faceCanvas.height = faceCanvas.clientHeight;
+        }
+        const result = faceState.landmarker.detectForVideo(faceVideo, performance.now());
+        if (result.faceBlendshapes?.length > 0) {
+          processFaceBlendshapes(result.faceBlendshapes[0].categories);
+        }
+        updateFaceFps();
+      }
+      window.requestAnimationFrame(faceLoop);
+    };
+
+    const fetchWithTimeout = async (url, timeout) => {
+      const controller = new AbortController();
+      const timer = window.setTimeout(() => controller.abort(), timeout);
+      try {
+        const response = await fetch(url, { signal: controller.signal });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response;
+      } finally {
+        window.clearTimeout(timer);
+      }
+    };
+
+    const loadFaceModelUrl = async () => {
+      for (const source of FACE_MODEL_SOURCES) {
+        try {
+          const response = await fetchWithTimeout(source.url, source.timeout);
+          const blob = await response.blob();
+          if (faceState.modelUrl) URL.revokeObjectURL(faceState.modelUrl);
+          faceState.modelUrl = URL.createObjectURL(blob);
+          return faceState.modelUrl;
+        } catch (error) {
+          console.warn('模型加载失败', source.url, error);
+        }
+      }
+      throw new Error('模型加载失败');
+    };
+
+    const startFaceRecognition = async () => {
+      if (faceState.running) return;
+      if (!faceStartBtn) return;
+      faceStartBtn.disabled = true;
+      faceStartBtn.textContent = '启动中...';
+      if (facePlaceholder) facePlaceholder.classList.add('hidden');
+      setFaceStatus('Loading', false);
+
+      try {
+        let FaceLandmarker = null;
+        let FilesetResolver = null;
+        for (const url of FACE_JS_URLS) {
+          try {
+            const module = await import(url);
+            FaceLandmarker = module.FaceLandmarker;
+            FilesetResolver = module.FilesetResolver;
+            break;
+          } catch (error) {
+            console.warn('Face JS import failed', url, error);
+          }
+        }
+        if (!FaceLandmarker || !FilesetResolver) {
+          throw new Error('面部识别引擎加载失败');
+        }
+
+        let fs = null;
+        for (const url of FACE_WASM_URLS) {
+          try {
+            fs = await FilesetResolver.forVisionTasks(url);
+            break;
+          } catch (error) {
+            console.warn('WASM load failed', url, error);
+          }
+        }
+        if (!fs) throw new Error('WASM 运行时加载失败');
+
+        const modelUrl = await loadFaceModelUrl();
+        try {
+          faceState.landmarker = await FaceLandmarker.createFromOptions(fs, {
+            baseOptions: { modelAssetPath: modelUrl, delegate: 'GPU' },
+            outputFaceBlendshapes: true,
+            runningMode: 'VIDEO',
+            numFaces: 1,
+          });
+        } catch (error) {
+          faceState.landmarker = await FaceLandmarker.createFromOptions(fs, {
+            baseOptions: { modelAssetPath: modelUrl, delegate: 'CPU' },
+            outputFaceBlendshapes: true,
+            runningMode: 'VIDEO',
+            numFaces: 1,
+          });
+        }
+
+        faceState.stream = await navigator.mediaDevices.getUserMedia({
+          video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' },
+        });
+        if (faceVideo) {
+          faceVideo.srcObject = faceState.stream;
+          await faceVideo.play();
+        }
+
+        faceState.running = true;
+        faceStartBtn.textContent = '停止识别';
+        faceStartBtn.disabled = false;
+        setFaceStatus('LIVE', true);
+        faceLoop();
+      } catch (error) {
+        console.error(error);
+        setFaceStatus('Standby', false);
+        faceStartBtn.textContent = '启动识别';
+        faceStartBtn.disabled = false;
+        if (facePlaceholder) facePlaceholder.classList.remove('hidden');
+        setFooter('面部识别启动失败，请检查网络或摄像头权限', true);
+      }
+    };
+
+    const stopFaceRecognition = () => {
+      faceState.running = false;
+      faceState.actionActive.next = false;
+      faceState.actionActive.prev = false;
+      if (faceState.stream) {
+        faceState.stream.getTracks().forEach((track) => track.stop());
+        faceState.stream = null;
+      }
+      if (faceVideo) {
+        faceVideo.srcObject = null;
+      }
+      if (faceStartBtn) {
+        faceStartBtn.textContent = '启动识别';
+        faceStartBtn.disabled = false;
+      }
+      if (facePlaceholder) facePlaceholder.classList.remove('hidden');
+      setFaceStatus('Standby', false);
+    };
 
     const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
@@ -2361,6 +3194,34 @@
       void nextPage();
     });
 
+    buildFaceBlendshapePanel();
+    buildFaceThresholdPanel();
+
+    faceBtn.addEventListener('click', () => {
+      faceOverlay.classList.remove('hidden');
+      faceOverlay.setAttribute('aria-hidden', 'false');
+    });
+
+    faceClose.addEventListener('click', () => {
+      faceOverlay.classList.add('hidden');
+      faceOverlay.setAttribute('aria-hidden', 'true');
+    });
+
+    faceOverlay.addEventListener('click', (event) => {
+      if (event.target === faceOverlay) {
+        faceOverlay.classList.add('hidden');
+        faceOverlay.setAttribute('aria-hidden', 'true');
+      }
+    });
+
+    faceStartBtn.addEventListener('click', () => {
+      if (faceState.running) {
+        stopFaceRecognition();
+      } else {
+        void startFaceRecognition();
+      }
+    });
+
     fullscreenBtn.addEventListener('click', () => {
       void toggleFullscreen();
     });
@@ -2449,6 +3310,7 @@
     window.addEventListener('beforeunload', () => {
       // 保存当前状态
       saveSessionState();
+      stopFaceRecognition();
       clearPdfCache();
       revokeAllUrls();
       if (state.pdfDoc) {
