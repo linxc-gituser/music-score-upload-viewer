@@ -814,6 +814,36 @@
       pointer-events: none;
     }
 
+    .face-preview-tools {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      z-index: 2;
+    }
+
+    .face-toggle-btn {
+      height: 26px;
+      padding: 0 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--muted);
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .face-toggle-btn.on {
+      color: var(--text);
+      border-color: rgba(140, 200, 255, 0.4);
+      background: rgba(140, 200, 255, 0.18);
+    }
+
     .face-section {
       border-radius: 16px;
       border: 1px solid rgba(255, 255, 255, 0.08);
@@ -830,6 +860,38 @@
       letter-spacing: 0.12em;
       text-transform: uppercase;
       color: var(--muted);
+    }
+
+    .face-section-header.split {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .face-mode-group {
+      display: inline-flex;
+      gap: 4px;
+    }
+
+    .face-mode-btn {
+      height: 22px;
+      padding: 0 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--muted);
+      font-size: 9px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .face-mode-btn.active {
+      color: var(--text);
+      border-color: rgba(255, 255, 255, 0.4);
+      background: rgba(255, 255, 255, 0.16);
     }
 
     .face-section-body {
@@ -1314,9 +1376,20 @@
                 <p>需要摄像头权限</p>
                 <button id="faceStartBtn" class="btn primary" type="button">启动识别</button>
               </div>
+              <div class="face-preview-tools">
+                <button id="faceEnableBtn" class="face-toggle-btn on" type="button" aria-label="开启面部翻页">翻页: 开</button>
+                <button id="faceMeshBtn" class="face-toggle-btn on" type="button" aria-label="显示关键点连线">关键点: 开</button>
+              </div>
             </div>
             <div class="face-section">
-              <div class="face-section-header">动作识别</div>
+              <div class="face-section-header split">
+                <span>动作识别</span>
+                <div class="face-mode-group">
+                  <button id="faceModeWink" class="face-mode-btn" type="button">Wink</button>
+                  <button id="faceModePucker" class="face-mode-btn" type="button">Pucker</button>
+                  <button id="faceModeBoth" class="face-mode-btn" type="button">Both</button>
+                </div>
+              </div>
               <div class="face-section-body">
                 <div class="face-action-strip">
                   <div class="face-card" id="faceCardWinkL">
@@ -1406,6 +1479,11 @@
     const faceCanvas = document.getElementById('faceCanvas');
     const facePlaceholder = document.getElementById('facePlaceholder');
     const faceStartBtn = document.getElementById('faceStartBtn');
+    const faceEnableBtn = document.getElementById('faceEnableBtn');
+    const faceMeshBtn = document.getElementById('faceMeshBtn');
+    const faceModeWink = document.getElementById('faceModeWink');
+    const faceModePucker = document.getElementById('faceModePucker');
+    const faceModeBoth = document.getElementById('faceModeBoth');
     const faceBlendshapePanel = document.getElementById('faceBlendshapePanel');
     const faceThresholdPanel = document.getElementById('faceThresholdPanel');
     const faceDebugPanel = document.getElementById('faceDebugPanel');
@@ -1418,6 +1496,7 @@
     const faceScoreWinkR = document.getElementById('faceScoreWinkR');
     const faceScorePuckerL = document.getElementById('faceScorePuckerL');
     const faceScorePuckerR = document.getElementById('faceScorePuckerR');
+    const faceCanvasCtx = faceCanvas ? faceCanvas.getContext('2d') : null;
 
     const state = {
       mode: 'idle',
@@ -1426,6 +1505,7 @@
       imagePages: [],
       pdfDoc: null,
       pdfCache: new Map(),
+      pdfRenderQueue: new Map(),
       pdfRenderToken: 0,
       title: '',
       currentPage: 1,
@@ -1435,6 +1515,7 @@
       panY: 0,
       pdfCacheVersion: 0,
       zoomRerenderTimer: 0,
+      loadingTimer: 0,
       pointers: new Map(),
       gesture: null,
       uiHidden: false,
@@ -1454,6 +1535,7 @@
     const MIN_ZOOM = 0.75;
     const MAX_ZOOM = 3;
     const ZOOM_STEP = 0.12;
+    const PDF_RENDER_QUALITY = 0.82;
 
     const FACE_JS_URLS = [
       'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14',
@@ -1492,19 +1574,36 @@
 
     const FACE_THRESHOLDS = {
       blink: { value: 0.35, min: 0.02, max: 0.95, step: 0.01, label: '眨眼阈值' },
-      winkDiff: { value: 0.2, min: 0.02, max: 0.8, step: 0.01, label: 'Wink 差值阈值' },
+      winkDiff: { value: 0.14, min: 0.02, max: 0.8, step: 0.01, label: 'Wink 差值阈值' },
       pucker: { value: 0.25, min: 0.02, max: 0.9, step: 0.01, label: '撅嘴阈值' },
-      puckerBias: { value: 0.08, min: 0.01, max: 0.6, step: 0.01, label: '撅嘴偏移阈值' },
+      puckerBias: { value: 0.21, min: 0.01, max: 0.6, step: 0.01, label: '撅嘴偏移阈值' },
     };
+
+    const FACE_PREF_KEY = 'music-score-viewer-face';
 
     const FACE_SMOOTH = { eye: { atk: 0.06, rel: 0.4 }, mouth: { atk: 0.18, rel: 0.45 } };
     const FACE_SMD = 0.5;
     const FACE_HYST_ATK = 1.0;
     const FACE_HYST_REL = 0.6;
 
+    const FACE_MESH = {
+      faceOval: [[10, 338], [338, 297], [297, 332], [332, 284], [284, 251], [251, 389], [389, 356], [356, 454], [454, 323], [323, 361], [361, 288], [288, 397], [397, 365], [365, 379], [379, 378], [378, 400], [400, 377], [377, 152], [152, 148], [148, 176], [176, 149], [149, 150], [150, 136], [136, 172], [172, 58], [58, 132], [132, 93], [93, 234], [234, 127], [127, 162], [162, 21], [21, 54], [54, 103], [103, 67], [67, 109], [109, 10]],
+      lEye: [[33, 7], [7, 163], [163, 144], [144, 145], [145, 153], [153, 154], [154, 155], [155, 133], [133, 173], [173, 157], [157, 158], [158, 159], [159, 160], [160, 161], [161, 246], [246, 33]],
+      rEye: [[362, 382], [382, 381], [381, 380], [380, 374], [374, 373], [373, 390], [390, 249], [249, 263], [263, 466], [466, 388], [388, 387], [387, 386], [386, 385], [385, 384], [384, 398], [398, 362]],
+      lBrow: [[276, 283], [283, 282], [282, 295], [295, 285], [285, 300], [300, 293], [293, 334], [334, 296], [296, 336]],
+      rBrow: [[46, 53], [53, 52], [52, 65], [65, 55], [55, 70], [70, 63], [63, 105], [105, 66], [66, 107]],
+      lips: [[61, 146], [146, 91], [91, 181], [181, 84], [84, 17], [17, 314], [314, 405], [405, 321], [321, 375], [375, 291], [291, 409], [409, 270], [270, 269], [269, 267], [267, 0], [0, 37], [37, 39], [39, 40], [40, 185], [185, 61]],
+      lipsIn: [[78, 191], [191, 80], [80, 81], [81, 82], [82, 13], [13, 312], [312, 311], [311, 310], [310, 415], [415, 308], [308, 324], [324, 318], [318, 402], [402, 317], [317, 14], [14, 87], [87, 178], [178, 88], [88, 95], [95, 78]],
+    };
+
     const faceState = {
       landmarker: null,
       running: false,
+      enabled: true,
+      showMesh: true,
+      triggerMode: 'both',
+      pendingAction: null,
+      delayMs: 100,
       stream: null,
       modelUrl: '',
       lastActionAt: 0,
@@ -1516,10 +1615,195 @@
       act: {},
     };
 
+    const loadFacePrefs = () => {
+      try {
+        const raw = localStorage.getItem(FACE_PREF_KEY);
+        if (!raw) return;
+        const data = JSON.parse(raw);
+        const thresholds = data?.thresholds || {};
+        Object.entries(FACE_THRESHOLDS).forEach(([key, cfg]) => {
+          const val = thresholds[key];
+          if (typeof val !== 'number' || Number.isNaN(val)) return;
+          const clamped = Math.min(cfg.max, Math.max(cfg.min, val));
+          cfg.value = clamped;
+        });
+        if (typeof data?.enabled === 'boolean') faceState.enabled = data.enabled;
+        if (typeof data?.showMesh === 'boolean') faceState.showMesh = data.showMesh;
+        if (typeof data?.triggerMode === 'string') faceState.triggerMode = data.triggerMode;
+      } catch (_) {
+        /* ignore */
+      }
+    };
+
+    const saveFacePrefs = () => {
+      try {
+        const thresholds = {};
+        Object.entries(FACE_THRESHOLDS).forEach(([key, cfg]) => {
+          thresholds[key] = cfg.value;
+        });
+        localStorage.setItem(FACE_PREF_KEY, JSON.stringify({
+          thresholds,
+          enabled: faceState.enabled,
+          showMesh: faceState.showMesh,
+          triggerMode: faceState.triggerMode,
+        }));
+      } catch (_) {
+        /* ignore */
+      }
+    };
+
     const setFaceStatus = (text, live) => {
       if (!faceStatus) return;
       faceStatus.textContent = text;
       faceStatus.classList.toggle('on', Boolean(live));
+    };
+
+    const updateFaceStatus = () => {
+      if (!faceState.running) {
+        setFaceStatus('Standby', false);
+        return;
+      }
+      if (faceState.enabled) {
+        setFaceStatus('LIVE', true);
+      } else {
+        setFaceStatus('Paused', false);
+      }
+    };
+
+    const setFaceToggleButton = (button, enabled, label) => {
+      if (!button) return;
+      button.classList.toggle('on', enabled);
+      button.textContent = `${label}: ${enabled ? '开' : '关'}`;
+    };
+
+    const updateFaceToggleUI = () => {
+      setFaceToggleButton(faceEnableBtn, faceState.enabled, '翻页');
+      setFaceToggleButton(faceMeshBtn, faceState.showMesh, '关键点');
+      if (!faceState.showMesh) {
+        clearFaceCanvas();
+      }
+      updateFaceStatus();
+    };
+
+    const updateFaceModeUI = () => {
+      if (!faceModeWink || !faceModePucker || !faceModeBoth) return;
+      faceModeWink.classList.toggle('active', faceState.triggerMode === 'wink');
+      faceModePucker.classList.toggle('active', faceState.triggerMode === 'pucker');
+      faceModeBoth.classList.toggle('active', faceState.triggerMode === 'both');
+    };
+
+    const scheduleFaceAction = (type, direction, action) => {
+      if (!faceState.enabled) return;
+      const now = performance.now();
+      const pending = faceState.pendingAction;
+
+      if (pending) {
+        if (pending.type === 'wink' && type !== 'wink') {
+          return;
+        }
+        if (type === 'wink') {
+          pending.type = 'wink';
+          pending.direction = direction;
+          pending.action = action;
+          pending.at = now;
+        } else if (pending.type !== 'wink') {
+          pending.type = type;
+          pending.direction = direction;
+          pending.action = action;
+          pending.at = now;
+        }
+        window.clearTimeout(pending.timer);
+      } else {
+        faceState.pendingAction = {
+          type,
+          direction,
+          action,
+          at: now,
+          timer: 0,
+        };
+      }
+
+      const current = faceState.pendingAction;
+      current.timer = window.setTimeout(() => {
+        const executing = faceState.pendingAction;
+        faceState.pendingAction = null;
+        if (!executing) return;
+        if (performance.now() - faceState.lastActionAt < faceState.cooldownMs) return;
+        faceState.lastActionAt = performance.now();
+        executing.action();
+      }, faceState.delayMs);
+    };
+
+    const updateFaceActionState = (key, type, action) => {
+      const active = Boolean(type);
+      if (!faceState.enabled) {
+        faceState.actionActive[key] = false;
+        return;
+      }
+      if (active && !faceState.actionActive[key]) {
+        scheduleFaceAction(type, key, action);
+      }
+      faceState.actionActive[key] = active;
+    };
+
+    const clearFaceCanvas = () => {
+      if (!faceCanvasCtx || !faceCanvas) return;
+      faceCanvasCtx.clearRect(0, 0, faceCanvas.width, faceCanvas.height);
+    };
+
+    const drawFaceMesh = (landmarks) => {
+      if (!faceCanvasCtx || !faceCanvas) return;
+      const width = faceCanvas.width;
+      const height = faceCanvas.height;
+      faceCanvasCtx.clearRect(0, 0, width, height);
+      if (!faceState.showMesh || !landmarks) return;
+
+      const drawConnections = (connections, color, lineWidth) => {
+        faceCanvasCtx.strokeStyle = color;
+        faceCanvasCtx.lineWidth = lineWidth;
+        faceCanvasCtx.beginPath();
+        connections.forEach(([a, b]) => {
+          const p1 = landmarks[a];
+          const p2 = landmarks[b];
+          if (!p1 || !p2) return;
+          faceCanvasCtx.moveTo(p1.x * width, p1.y * height);
+          faceCanvasCtx.lineTo(p2.x * width, p2.y * height);
+        });
+        faceCanvasCtx.stroke();
+      };
+
+      drawConnections(FACE_MESH.faceOval, 'rgba(176, 140, 255, 0.28)', 1.1);
+      drawConnections(FACE_MESH.lEye, 'rgba(140, 200, 255, 0.45)', 1.1);
+      drawConnections(FACE_MESH.rEye, 'rgba(140, 200, 255, 0.45)', 1.1);
+      drawConnections(FACE_MESH.lBrow, 'rgba(140, 200, 255, 0.26)', 1.0);
+      drawConnections(FACE_MESH.rBrow, 'rgba(140, 200, 255, 0.26)', 1.0);
+      drawConnections(FACE_MESH.lips, 'rgba(255, 154, 168, 0.5)', 1.2);
+      drawConnections(FACE_MESH.lipsIn, 'rgba(255, 154, 168, 0.32)', 1.0);
+
+      const keyDots = [
+        [61, 'rgba(255, 154, 168, 0.9)', 'rgba(255, 154, 168, 0.12)'],
+        [291, 'rgba(255, 154, 168, 0.9)', 'rgba(255, 154, 168, 0.12)'],
+        [13, 'rgba(176, 140, 255, 0.9)', 'rgba(176, 140, 255, 0.12)'],
+        [14, 'rgba(176, 140, 255, 0.9)', 'rgba(176, 140, 255, 0.12)'],
+        [33, 'rgba(140, 200, 255, 0.9)', 'rgba(140, 200, 255, 0.12)'],
+        [263, 'rgba(140, 200, 255, 0.9)', 'rgba(140, 200, 255, 0.12)'],
+        [10, 'rgba(140, 200, 255, 0.7)', 'rgba(140, 200, 255, 0.1)'],
+        [152, 'rgba(176, 140, 255, 0.7)', 'rgba(176, 140, 255, 0.1)'],
+      ];
+      keyDots.forEach(([idx, strokeColor, fillColor]) => {
+        const point = landmarks[idx];
+        if (!point) return;
+        const x = point.x * width;
+        const y = point.y * height;
+        faceCanvasCtx.beginPath();
+        faceCanvasCtx.arc(x, y, 4, 0, Math.PI * 2);
+        faceCanvasCtx.fillStyle = fillColor;
+        faceCanvasCtx.fill();
+        faceCanvasCtx.beginPath();
+        faceCanvasCtx.arc(x, y, 2, 0, Math.PI * 2);
+        faceCanvasCtx.fillStyle = strokeColor;
+        faceCanvasCtx.fill();
+      });
     };
 
     const buildFaceBlendshapePanel = () => {
@@ -1560,6 +1844,7 @@
           cfg.value = parseFloat(input.value);
           const label = document.getElementById(`faceTv-${k}`);
           if (label) label.textContent = cfg.value.toFixed(2);
+          saveFacePrefs();
         });
       });
     };
@@ -1621,6 +1906,10 @@
     };
 
     const maybeTriggerFaceAction = (key, active, action) => {
+      if (!faceState.enabled) {
+        faceState.actionActive[key] = false;
+        return;
+      }
       const now = performance.now();
       if (active && !faceState.actionActive[key] && now - faceState.lastActionAt >= faceState.cooldownMs) {
         faceState.lastActionAt = now;
@@ -1665,10 +1954,15 @@
       setFaceCard(faceCardPuckerL, faceScorePuckerL, isLPuck, cPL, 'left');
       setFaceCard(faceCardPuckerR, faceScorePuckerR, isRPuck, cPR, 'right');
 
-      maybeTriggerFaceAction('next', isRWink || isLPuck, () => {
+      const allowWink = faceState.triggerMode !== 'pucker';
+      const allowPucker = faceState.triggerMode !== 'wink';
+      const nextType = allowWink && isRWink ? 'wink' : (allowPucker && isLPuck ? 'pucker' : null);
+      const prevType = allowWink && isLWink ? 'wink' : (allowPucker && isRPuck ? 'pucker' : null);
+
+      updateFaceActionState('next', nextType, () => {
         if (state.mode !== 'idle') void nextPage();
       });
-      maybeTriggerFaceAction('prev', isLWink || isRPuck, () => {
+      updateFaceActionState('prev', prevType, () => {
         if (state.mode !== 'idle') void prevPage();
       });
 
@@ -1703,6 +1997,11 @@
         const result = faceState.landmarker.detectForVideo(faceVideo, performance.now());
         if (result.faceBlendshapes?.length > 0) {
           processFaceBlendshapes(result.faceBlendshapes[0].categories);
+        }
+        if (result.faceLandmarks?.length > 0) {
+          drawFaceMesh(result.faceLandmarks[0]);
+        } else {
+          clearFaceCanvas();
         }
         updateFaceFps();
       }
@@ -1800,11 +2099,11 @@
         faceState.running = true;
         faceStartBtn.textContent = '停止识别';
         faceStartBtn.disabled = false;
-        setFaceStatus('LIVE', true);
+        updateFaceToggleUI();
         faceLoop();
       } catch (error) {
         console.error(error);
-        setFaceStatus('Standby', false);
+        updateFaceStatus();
         faceStartBtn.textContent = '启动识别';
         faceStartBtn.disabled = false;
         if (facePlaceholder) facePlaceholder.classList.remove('hidden');
@@ -1816,6 +2115,11 @@
       faceState.running = false;
       faceState.actionActive.next = false;
       faceState.actionActive.prev = false;
+      if (faceState.pendingAction?.timer) {
+        window.clearTimeout(faceState.pendingAction.timer);
+      }
+      faceState.pendingAction = null;
+      clearFaceCanvas();
       if (faceState.stream) {
         faceState.stream.getTracks().forEach((track) => track.stop());
         faceState.stream = null;
@@ -1828,7 +2132,7 @@
         faceStartBtn.disabled = false;
       }
       if (facePlaceholder) facePlaceholder.classList.remove('hidden');
-      setFaceStatus('Standby', false);
+      updateFaceStatus();
     };
 
     const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
@@ -1904,6 +2208,20 @@
 
     const setLoading = (value) => {
       loadingOverlay.classList.toggle('hidden', !value);
+    };
+
+    const showLoadingDelayed = () => {
+      window.clearTimeout(state.loadingTimer);
+      state.loadingTimer = window.setTimeout(() => {
+        state.loadingTimer = 0;
+        setLoading(true);
+      }, 160);
+    };
+
+    const clearLoadingDelayed = () => {
+      window.clearTimeout(state.loadingTimer);
+      state.loadingTimer = 0;
+      setLoading(false);
     };
 
     const setFooter = (text, isError = false) => {
@@ -1986,6 +2304,23 @@
       };
     };
 
+    const getPageDisplayRect = () => {
+      const rect = stageInner.getBoundingClientRect();
+      const renderSize = getRenderSize();
+      const width = renderSize.width * state.zoom;
+      const height = renderSize.height * state.zoom;
+      const centerX = rect.left + rect.width / 2 + state.panX;
+      const centerY = rect.top + rect.height / 2 + state.panY;
+      return {
+        left: centerX - width / 2,
+        right: centerX + width / 2,
+        top: centerY - height / 2,
+        bottom: centerY + height / 2,
+        width,
+        height,
+      };
+    };
+
     const renderPdfPageToUrl = async (pageNumber, cacheInfo = getPdfCacheKeyInfo(pageNumber)) => {
       if (!state.pdfDoc) return null;
 
@@ -1993,53 +2328,82 @@
       const cached = state.pdfCache.get(cacheInfo.key);
       if (cached) return cached;
 
-      const page = await state.pdfDoc.getPage(pageNumber);
-      const baseViewport = page.getViewport({ scale: 1 });
-      const fitScale = Math.min(cacheInfo.width / baseViewport.width, cacheInfo.height / baseViewport.height);
-      const renderScale = Math.max(0.2, fitScale * state.zoom * cacheInfo.ratio);
-      const viewport = page.getViewport({ scale: renderScale });
-
-      const canvas = document.createElement('canvas');
-      const context = canvas.getContext('2d', { alpha: false });
-      if (!context) return null;
-
-      canvas.width = Math.max(1, Math.floor(viewport.width));
-      canvas.height = Math.max(1, Math.floor(viewport.height));
-
-      await page.render({ canvas, canvasContext: context, viewport }).promise;
-
-      const blob = await new Promise((resolve) => {
-        canvas.toBlob((result) => resolve(result), 'image/jpeg', 0.94);
-      });
-      if (!blob) return null;
-
-      const pageUrl = URL.createObjectURL(blob);
-      if (version !== state.pdfCacheVersion) {
-        URL.revokeObjectURL(pageUrl);
-        return null;
+      if (state.pdfRenderQueue.has(cacheInfo.key)) {
+        return state.pdfRenderQueue.get(cacheInfo.key);
       }
 
-      state.pdfCache.set(cacheInfo.key, pageUrl);
-      state.objectUrls.push(pageUrl);
-      return pageUrl;
+      const renderTask = (async () => {
+        const page = await state.pdfDoc.getPage(pageNumber);
+        const baseViewport = page.getViewport({ scale: 1 });
+        const fitScale = Math.min(cacheInfo.width / baseViewport.width, cacheInfo.height / baseViewport.height);
+        const renderScale = Math.max(0.2, fitScale * state.zoom * cacheInfo.ratio * PDF_RENDER_QUALITY);
+        const viewport = page.getViewport({ scale: renderScale });
+
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d', { alpha: false });
+        if (!context) return null;
+
+        canvas.width = Math.max(1, Math.floor(viewport.width));
+        canvas.height = Math.max(1, Math.floor(viewport.height));
+
+        await page.render({ canvas, canvasContext: context, viewport }).promise;
+
+        const blob = await new Promise((resolve) => {
+          canvas.toBlob((result) => resolve(result), 'image/jpeg', 0.94);
+        });
+        if (!blob) return null;
+
+        const pageUrl = URL.createObjectURL(blob);
+        if (version !== state.pdfCacheVersion) {
+          URL.revokeObjectURL(pageUrl);
+          return null;
+        }
+
+        state.pdfCache.set(cacheInfo.key, pageUrl);
+        state.objectUrls.push(pageUrl);
+        return pageUrl;
+      })();
+
+      state.pdfRenderQueue.set(cacheInfo.key, renderTask);
+      const result = await renderTask;
+      state.pdfRenderQueue.delete(cacheInfo.key);
+      return result;
+    };
+
+    const primePdfPageCache = (pageNumber) => {
+      if (state.mode !== 'pdf' || !state.pdfDoc) return;
+      if (pageNumber < 1 || pageNumber > state.pageCount) return;
+      const cacheInfo = getPdfCacheKeyInfo(pageNumber);
+      if (state.pdfCache.has(cacheInfo.key) || state.pdfRenderQueue.has(cacheInfo.key)) return;
+      void renderPdfPageToUrl(pageNumber, cacheInfo);
     };
 
     const prefetchPdfWindow = async (centerPage) => {
       if (state.mode !== 'pdf' || !state.pdfDoc) return;
 
-      const pages = [];
-      for (let offset = 1; offset <= 2; offset += 1) {
-        pages.push(centerPage - offset, centerPage + offset);
+      const keepPages = new Set();
+      for (let offset = -2; offset <= 2; offset += 1) {
+        const pageNumber = centerPage + offset;
+        if (pageNumber >= 1 && pageNumber <= state.pageCount) {
+          keepPages.add(pageNumber);
+        }
       }
 
-      for (const pageNumber of pages) {
+      // 清理主界面超出窗口的缓存，仅保留当前页±2页
+      for (const key of Array.from(state.pdfCache.keys())) {
+        const pageNumber = Number(key.split('|')[0]);
+        if (!keepPages.has(pageNumber)) {
+          const url = state.pdfCache.get(key);
+          if (url) URL.revokeObjectURL(url);
+          state.pdfCache.delete(key);
+        }
+      }
+
+      for (const pageNumber of keepPages) {
         if (state.mode !== 'pdf' || !state.pdfDoc) return;
-        if (pageNumber < 1 || pageNumber > state.pageCount || pageNumber === state.currentPage) continue;
-
-        const cacheInfo = getPdfCacheKeyInfo(pageNumber);
-        if (state.pdfCache.has(cacheInfo.key)) continue;
-
-        await renderPdfPageToUrl(pageNumber, cacheInfo);
+        if (pageNumber === state.currentPage) continue;
+        if (Math.abs(pageNumber - centerPage) === 1) continue;
+        primePdfPageCache(pageNumber);
       }
     };
 
@@ -2087,7 +2451,7 @@
         }
 
         if (showLoading) {
-          setLoading(true);
+          showLoadingDelayed();
         }
 
         try {
@@ -2129,7 +2493,9 @@
             setFooter('PDF 页面渲染失败，请重试', true);
           }
         } finally {
-          if (showLoading && token === state.pdfRenderToken) setLoading(false);
+          if (showLoading && token === state.pdfRenderToken) {
+            clearLoadingDelayed();
+          }
         }
       }
     };
@@ -2279,6 +2645,8 @@
       const nextPage = clamp(targetPage, 1, state.pageCount);
       if (nextPage === state.currentPage) return;
 
+      primePdfPageCache(nextPage);
+
       state.isAnimating = true;
       state.previewDirection = direction;
       void setBackPreviewPage(nextPage);
@@ -2303,6 +2671,8 @@
       if (state.mode === 'idle' || state.isAnimating) return;
       const nextPage = clamp(targetPage, 1, state.pageCount);
       if (nextPage === state.currentPage) return;
+
+      primePdfPageCache(nextPage);
 
       state.isAnimating = true;
       state.currentPage = nextPage;
@@ -2400,6 +2770,8 @@
       state.pdfRenderToken++;
       window.clearTimeout(state.zoomRerenderTimer);
       state.zoomRerenderTimer = 0;
+      window.clearTimeout(state.loadingTimer);
+      state.loadingTimer = 0;
       state.centerTapAt = 0;
 
       if (state.pdfDoc) {
@@ -2410,6 +2782,7 @@
       revokeAllUrls();
       closeThumbnailPanel();
       state.thumbnailCache.clear();
+      state.pdfRenderQueue.clear();
 
       state.mode = 'idle';
       state.imagePages = [];
@@ -2635,6 +3008,7 @@
           t: performance.now(),
           startPanX: state.panX,
           startPanY: state.panY,
+          fromStage: stageInner.contains(event.target),
           moved: false,
         };
         return;
@@ -2818,8 +3192,21 @@
       }
 
       if (dt < tapDuration && absX < tapDistance && absY < tapDistance) {
-        const rect = stageInner.getBoundingClientRect();
-        const xRatio = (event.clientX - rect.left) / rect.width;
+        if (!start.fromStage) {
+          finalizePointerState();
+          return;
+        }
+        const pageRect = getPageDisplayRect();
+        if (
+          event.clientX < pageRect.left ||
+          event.clientX > pageRect.right ||
+          event.clientY < pageRect.top ||
+          event.clientY > pageRect.bottom
+        ) {
+          finalizePointerState();
+          return;
+        }
+        const xRatio = (event.clientX - pageRect.left) / pageRect.width;
         handleTapZone(xRatio, event.pointerType);
       } else if (state.swipeActive) {
         animateSwipeBack();
@@ -3194,8 +3581,11 @@
       void nextPage();
     });
 
+    loadFacePrefs();
     buildFaceBlendshapePanel();
     buildFaceThresholdPanel();
+    updateFaceToggleUI();
+    updateFaceModeUI();
 
     faceBtn.addEventListener('click', () => {
       faceOverlay.classList.remove('hidden');
@@ -3220,6 +3610,39 @@
       } else {
         void startFaceRecognition();
       }
+    });
+
+    faceEnableBtn.addEventListener('click', () => {
+      faceState.enabled = !faceState.enabled;
+      updateFaceToggleUI();
+      saveFacePrefs();
+    });
+
+    faceMeshBtn.addEventListener('click', () => {
+      faceState.showMesh = !faceState.showMesh;
+      updateFaceToggleUI();
+      if (!faceState.showMesh) {
+        clearFaceCanvas();
+      }
+      saveFacePrefs();
+    });
+
+    faceModeWink.addEventListener('click', () => {
+      faceState.triggerMode = 'wink';
+      updateFaceModeUI();
+      saveFacePrefs();
+    });
+
+    faceModePucker.addEventListener('click', () => {
+      faceState.triggerMode = 'pucker';
+      updateFaceModeUI();
+      saveFacePrefs();
+    });
+
+    faceModeBoth.addEventListener('click', () => {
+      faceState.triggerMode = 'both';
+      updateFaceModeUI();
+      saveFacePrefs();
     });
 
     fullscreenBtn.addEventListener('click', () => {
