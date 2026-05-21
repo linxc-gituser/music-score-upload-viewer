@@ -37,6 +37,23 @@
       font: inherit;
     }
 
+    .shell,
+    .stage,
+    .stage-inner,
+    .topbar,
+    .footer,
+    .empty {
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .topbar input,
+    .topbar textarea,
+    .page-input-edit {
+      user-select: text;
+      -webkit-user-select: text;
+    }
+
     .app {
       position: relative;
       width: 100%;
@@ -82,9 +99,8 @@
       z-index: 20;
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      padding: 11px 14px;
+      gap: 8px;
+      padding: 8px 12px;
       border: 1px solid rgba(255, 255, 255, 0.12);
       border-radius: 20px;
       background: linear-gradient(180deg, rgba(16, 20, 34, 0.58), rgba(16, 20, 34, 0.36));
@@ -92,6 +108,7 @@
       -webkit-backdrop-filter: blur(24px) saturate(145%);
       box-shadow: 0 12px 36px rgba(0, 0, 0, 0.22);
       transition: transform 0.28s ease, opacity 0.28s ease, background 0.28s ease;
+      flex-wrap: nowrap;
     }
 
     .topbar.ui-hidden {
@@ -100,67 +117,91 @@
       pointer-events: none;
     }
 
-    .brand {
+    .file-name {
+      flex: 1 1 auto;
       min-width: 0;
-    }
-
-    .brand h1 {
-      margin: 0;
-      font-size: 15px;
-      font-weight: 700;
-      letter-spacing: 0.02em;
-      white-space: nowrap;
-    }
-
-    .brand p {
-      margin: 4px 0 0;
       font-size: 12px;
       color: var(--muted);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      max-width: min(44vw, 620px);
+    }
+
+    .topbar-spacer {
+      flex: 0 0 auto;
+      width: 1px;
+      height: 22px;
+      background: rgba(255, 255, 255, 0.12);
+      margin: 0 2px;
     }
 
     .toolbar {
       display: flex;
       align-items: center;
       gap: 8px;
-      flex-wrap: wrap;
+      flex-wrap: nowrap;
       min-width: 0;
     }
 
-    .toolbar-left {
-      justify-content: flex-start;
-      flex: 1 1 auto;
-      min-width: 0;
-    }
-
-    .toolbar-right {
-      justify-content: flex-end;
-      flex: 0 0 auto;
-    }
-
-    .page-jump {
+    .page-display {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 8px;
-      flex: 0 0 auto;
+      gap: 0;
+      height: 38px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text);
+      white-space: nowrap;
+      padding: 0 14px;
+      font-size: 13px;
+      font-variant-numeric: tabular-nums;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.18s ease, border-color 0.18s ease;
+      gap: 0;
     }
 
-    .page-jump .field {
-      width: auto;
-      min-width: 54px;
+    .page-display:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.24);
     }
 
-    .page-jump .btn {
-      width: auto;
-      padding: 0 10px;
+    .page-display .page-cur {
+      display: inline-block;
+      min-width: 24px;
+      text-align: right;
     }
 
-    #pageInput {
-      text-overflow: clip;
+    .page-display .page-sep {
+      display: inline-block;
+      margin: 0 2px;
+      opacity: 0.55;
+    }
+
+    .page-display .page-total {
+      display: inline-block;
+      min-width: 24px;
+      text-align: left;
+    }
+
+    .page-display.editing {
+      padding: 0 4px;
+    }
+
+    .page-display .page-input-edit {
+      width: 40px;
+      height: 26px;
+      border: none;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.12);
+      color: var(--text);
+      text-align: center;
+      font-size: 13px;
+      font-variant-numeric: tabular-nums;
+      padding: 0 2px;
+      outline: none;
     }
 
     .btn,
@@ -269,7 +310,7 @@
       position: absolute;
       top: 0;
       bottom: 0;
-      width: 22%;
+      width: 40%;
       z-index: 8;
       cursor: pointer;
       -webkit-tap-highlight-color: transparent;
@@ -645,80 +686,62 @@
       display: none !important;
     }
 
+    @media (max-width: 1200px) {
+      .topbar {
+        left: 12px;
+        right: 12px;
+        top: 12px;
+        gap: 7px;
+        padding: 7px 11px;
+      }
+
+      .btn {
+        padding: 0 10px;
+        font-size: 13px;
+      }
+    }
+
     @media (max-width: 860px) {
       .topbar {
-        left: 10px;
-        right: 10px;
-        top: 10px;
-        gap: 10px;
-        padding: 10px 12px;
-        border-radius: 18px;
-      }
-
-      .topbar {
-        flex-direction: column;
-        align-items: stretch;
-      }
-
-      .toolbar {
-        justify-content: flex-start;
-        overflow-x: auto;
-        overflow-y: hidden;
-        padding-bottom: 2px;
-        scrollbar-width: none;
-      }
-
-      .toolbar::-webkit-scrollbar {
-        display: none;
-      }
-
-      .brand p {
-        max-width: 100%;
-      }
-
-      .stage {
-        padding: 0;
-      }
-
-      .shell:fullscreen .stage,
-      .shell:-webkit-full-screen .stage {
-        padding: 0;
+        left: 8px;
+        right: 8px;
+        top: 8px;
+        gap: 6px;
+        padding: 6px 9px;
+        border-radius: 16px;
       }
 
       .btn,
       .field,
       .select {
         height: 34px;
+        font-size: 12.5px;
       }
 
       .btn {
-        padding: 0 12px;
+        padding: 0 9px;
+        gap: 5px;
       }
 
-      .field {
-        width: 76px;
+      .file-name {
+        font-size: 11.5px;
       }
 
-      .page-jump {
-        width: 118px;
-        flex-basis: 118px;
+      .topbar-spacer {
+        height: 18px;
+        margin: 0 1px;
       }
 
-      .page-jump .field {
-        width: auto;
-        min-width: 50px;
+      .page-display {
+        height: 34px;
+        padding: 0 9px;
+        font-size: 12.5px;
       }
 
-      .page-jump .btn {
-        width: 50px;
-      }
-
-      .brand h1 {
-        font-size: 14px;
-      }
-
-      .brand p {
-        font-size: 11px;
+      .page-display .page-input-edit {
+        width: 34px;
+        height: 24px;
+        font-size: 12px;
       }
 
       .empty {
@@ -727,7 +750,7 @@
       }
 
       .empty .title {
-        font-size: clamp(20px, 7vw, 30px);
+        font-size: clamp(18px, 6vw, 28px);
       }
 
       .empty .desc {
@@ -735,9 +758,112 @@
       }
 
       .footer {
-        bottom: 12px;
+        bottom: 10px;
         font-size: 11px;
+        padding: 7px 12px;
         max-width: calc(100% - 20px);
+      }
+
+      .thumbnail-panel {
+        width: min(360px, 52vw);
+      }
+
+      .thumbnail-grid {
+        padding: 50px 10px 12px;
+        gap: 6px;
+      }
+
+      .thumbnail-thumb {
+        aspect-ratio: 3 / 4;
+      }
+
+      .thumbnail-page {
+        font-size: 11px;
+      }
+
+      .edge-hit {
+        width: 30%;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .topbar {
+        left: 4px;
+        right: 4px;
+        top: 4px;
+        gap: 4px;
+        padding: 5px 6px;
+        border-radius: 12px;
+      }
+
+      .btn,
+      .field,
+      .select {
+        height: 30px;
+        font-size: 11.5px;
+      }
+
+      .btn {
+        padding: 0 6px;
+        gap: 3px;
+      }
+
+      .file-name {
+        font-size: 10.5px;
+      }
+
+      .topbar-spacer {
+        display: none;
+      }
+
+      .page-display {
+        height: 30px;
+        padding: 0 6px;
+        font-size: 11.5px;
+      }
+
+      .page-display .page-input-edit {
+        width: 28px;
+        height: 20px;
+        font-size: 11px;
+      }
+
+      .empty .title {
+        font-size: clamp(16px, 5.5vw, 24px);
+      }
+
+      .empty .desc {
+        font-size: 12px;
+      }
+
+      .empty .hint {
+        font-size: 11px;
+      }
+
+      .footer {
+        bottom: 8px;
+        font-size: 10px;
+        padding: 6px 10px;
+        max-width: calc(100% - 12px);
+      }
+
+      .thumbnail-panel {
+        width: min(300px, 68vw);
+      }
+
+      .thumbnail-grid {
+        padding: 46px 8px 10px;
+        gap: 5px;
+      }
+
+      .thumbnail-close {
+        width: 30px;
+        height: 30px;
+        font-size: 12px;
+      }
+
+      .edge-hit {
+        width: 28%;
       }
     }
   </style>
@@ -745,26 +871,22 @@
 <body>
   <div id="shell" class="shell" tabindex="0" aria-label="乐谱查看器">
     <header id="topbar" class="topbar">
-      <div class="brand">
-        <h1>乐谱查看器</h1>
-        <p id="fileName">未加载文件</p>
+      <label class="btn primary" for="fileInput">上传</label>
+      <input id="fileInput" class="file-input" type="file" accept="image/*,application/pdf" multiple />
+
+      <div id="pageDisplay" class="page-display" aria-label="页码，点击跳转" title="点击输入页码跳转">
+        <span id="pageCurDisplay" class="page-cur">1</span>
+        <span class="page-sep">/</span>
+        <span id="pageTotalDisplay" class="page-total">0</span>
       </div>
 
-      <div class="toolbar toolbar-left">
-        <label class="btn primary" for="fileInput">上传文件</label>
-        <input id="fileInput" class="file-input" type="file" accept="image/*,application/pdf" multiple />
+      <span id="fileName" class="file-name">未加载文件</span>
 
-        <div class="page-jump">
-          <input id="pageInput" class="field" type="number" min="1" step="1" value="1" aria-label="页码" disabled />
-          <button id="pageJumpBtn" class="btn" type="button" disabled>跳转</button>
-        </div>
-      </div>
+      <div class="topbar-spacer"></div>
 
-      <div class="toolbar toolbar-right">
-        <button id="thumbnailBtn" class="btn" type="button" aria-label="显示缩略图">📋</button>
-        <button id="fullscreenBtn" class="btn" type="button">全屏</button>
-        <button id="resetBtn" class="btn" type="button">清空</button>
-      </div>
+      <button id="thumbnailBtn" class="btn" type="button" aria-label="显示缩略图">📋</button>
+      <button id="fullscreenBtn" class="btn" type="button">全屏</button>
+      <button id="resetBtn" class="btn" type="button">清空</button>
     </header>
 
     <main class="stage">
@@ -776,7 +898,7 @@
           <p class="title">把图片或 PDF 拖到这里</p>
           <p class="desc">
             统一单页阅读引擎：图片和 PDF 都会渲染为同一种页面视觉。
-            支持点击左右边缘翻页、左右滑动翻页，并保持舞台不超出显示区域。
+            支持点击左右边缘翻页、全屏滑动翻页，并保持舞台不超出显示区域。
           </p>
           <p class="hint">支持一次导入多张图片，按文件名顺序作为同一首曲子阅读。</p>
         </div>
@@ -794,17 +916,17 @@
         <div id="loadingOverlay" class="overlay hidden" aria-hidden="true">
           <div class="spinner"></div>
         </div>
-
-        <div id="thumbnailShade" class="thumbnail-shade hidden" aria-hidden="true"></div>
-
-        <div id="thumbnailPanel" class="thumbnail-panel hidden" aria-hidden="true">
-          <div class="thumbnail-container">
-            <button class="thumbnail-close" aria-label="关闭缩略图">✕</button>
-            <div id="thumbnailGrid" class="thumbnail-grid"></div>
-          </div>
-        </div>
       </section>
     </main>
+
+    <!-- 缩略图面板移到 stage 外部，避免 stage-inner 的 touch-action:none 影响缩略图滚动 -->
+    <div id="thumbnailShade" class="thumbnail-shade hidden" aria-hidden="true"></div>
+    <div id="thumbnailPanel" class="thumbnail-panel hidden" aria-hidden="true">
+      <div class="thumbnail-container">
+        <button class="thumbnail-close" aria-label="关闭缩略图">✕</button>
+        <div id="thumbnailGrid" class="thumbnail-grid"></div>
+      </div>
+    </div>
 
     <div id="footer" class="footer">等待上传文件</div>
   </div>
@@ -832,8 +954,9 @@
     const thumbnailGrid = document.getElementById('thumbnailGrid');
     const fileInput = document.getElementById('fileInput');
     const fileName = document.getElementById('fileName');
-    const pageInput = document.getElementById('pageInput');
-    const pageJumpBtn = document.getElementById('pageJumpBtn');
+    const pageDisplay = document.getElementById('pageDisplay');
+    const pageCurDisplay = document.getElementById('pageCurDisplay');
+    const pageTotalDisplay = document.getElementById('pageTotalDisplay');
     const thumbnailBtn = document.getElementById('thumbnailBtn');
     const fullscreenBtn = document.getElementById('fullscreenBtn');
     const resetBtn = document.getElementById('resetBtn');
@@ -985,17 +1108,17 @@
 
       if (!hasContent) {
         fileName.textContent = '未加载文件';
-        pageInput.disabled = true;
-        pageJumpBtn.disabled = true;
-        pageInput.value = '1';
+        pageDisplay.style.opacity = '0.4';
+        pageDisplay.style.pointerEvents = 'none';
+        if (!pageEditActive) rebuildPageDisplay();
         fullscreenBtn.textContent = document.fullscreenElement ? '退出全屏' : '全屏';
         return;
       }
 
       fileName.textContent = state.title;
-      pageInput.disabled = false;
-      pageJumpBtn.disabled = false;
-      pageInput.value = String(state.currentPage);
+      pageDisplay.style.opacity = '1';
+      pageDisplay.style.pointerEvents = 'auto';
+      if (!pageEditActive) rebuildPageDisplay();
 
       fullscreenBtn.textContent = document.fullscreenElement ? '退出全屏' : '全屏';
     };
@@ -1090,6 +1213,7 @@
     const renderCurrentPage = async ({ showLoading = true } = {}) => {
       if (state.mode === 'image') {
         pageImage.src = state.imagePages[state.currentPage - 1] || '';
+        showPageLayer();
         clampPan();
         applyPageTransform();
         const neighborIndex = state.currentPage < state.pageCount ? state.currentPage : state.currentPage - 2;
@@ -1105,14 +1229,16 @@
 
       if (state.mode === 'pdf') {
         const token = ++state.pdfRenderToken;
-        const cacheInfo = getPdfCacheKeyInfo(state.currentPage);
+        const pageNum = state.currentPage;
+        const cacheInfo = getPdfCacheKeyInfo(pageNum);
         const cached = state.pdfCache.get(cacheInfo.key);
 
         if (cached) {
+          showPageLayer();
           pageImage.src = cached;
           clampPan();
           applyPageTransform();
-          const neighborPage = state.currentPage < state.pageCount ? state.currentPage + 1 : state.currentPage - 1;
+          const neighborPage = pageNum < state.pageCount ? pageNum + 1 : pageNum - 1;
           if (neighborPage >= 1 && neighborPage <= state.pageCount) {
             void renderPdfPageToUrl(neighborPage).then((neighborUrl) => {
               if (neighborUrl && state.mode === 'pdf') {
@@ -1122,8 +1248,8 @@
           } else {
             hideBackPageLayer();
           }
-          setFooter(`第 ${state.currentPage} / ${state.pageCount} 页`);
-          void prefetchPdfWindow(state.currentPage);
+          setFooter(`第 ${pageNum} / ${state.pageCount} 页`);
+          void prefetchPdfWindow(pageNum);
           return;
         }
 
@@ -1132,12 +1258,27 @@
         }
 
         try {
-          const url = await renderPdfPageToUrl(state.currentPage, cacheInfo);
-          if (token !== state.pdfRenderToken || !url) return;
+          const url = await renderPdfPageToUrl(pageNum, cacheInfo);
+          if (token !== state.pdfRenderToken) return;
+          if (!url) {
+            // 渲染返回空但 token 仍有效 → 重试一次
+            const retryUrl = await renderPdfPageToUrl(pageNum);
+            if (token !== state.pdfRenderToken) return;
+            if (retryUrl) {
+              showPageLayer();
+              pageImage.src = retryUrl;
+              clampPan();
+              applyPageTransform();
+            } else {
+              setFooter(`第 ${pageNum} 页渲染失败，请重试`, true);
+            }
+            return;
+          }
+          showPageLayer();
           pageImage.src = url;
           clampPan();
           applyPageTransform();
-          const neighborPage = state.currentPage < state.pageCount ? state.currentPage + 1 : state.currentPage - 1;
+          const neighborPage = pageNum < state.pageCount ? pageNum + 1 : pageNum - 1;
           if (neighborPage >= 1 && neighborPage <= state.pageCount) {
             void renderPdfPageToUrl(neighborPage).then((neighborUrl) => {
               if (neighborUrl && token === state.pdfRenderToken && state.mode === 'pdf') {
@@ -1147,11 +1288,13 @@
           } else {
             hideBackPageLayer();
           }
-          setFooter(`第 ${state.currentPage} / ${state.pageCount} 页`);
-          void prefetchPdfWindow(state.currentPage);
+          setFooter(`第 ${pageNum} / ${state.pageCount} 页`);
+          void prefetchPdfWindow(pageNum);
         } catch (error) {
           console.error(error);
-          setFooter('PDF 页面渲染失败，请重试', true);
+          if (token === state.pdfRenderToken) {
+            setFooter('PDF 页面渲染失败，请重试', true);
+          }
         } finally {
           if (showLoading && token === state.pdfRenderToken) setLoading(false);
         }
@@ -1245,7 +1388,7 @@
       const width = Math.max(1, Math.floor(stageInner.getBoundingClientRect().width));
       const targetX = direction === 'next' ? -width : width;
       const distance = Math.max(0, Math.abs(targetX - startOffsetX));
-      const duration = clamp(Math.round((distance / width) * 170), 90, 170);
+      const duration = clamp(Math.round((distance / width) * 120), 50, 120);
       const fromTransform = `translate3d(${startOffsetX}px, ${state.panY}px, 0) scale(${state.zoom})`;
       const toTransform = `translate3d(${targetX}px, ${state.panY}px, 0) scale(${state.zoom})`;
 
@@ -1277,7 +1420,7 @@
       const width = Math.max(1, Math.floor(stageInner.getBoundingClientRect().width));
       const targetX = direction === 'next' ? -width : width;
       const distance = Math.max(0, Math.abs(targetX - startOffsetX));
-      const duration = clamp(Math.round((distance / width) * 170), 90, 170);
+      const duration = clamp(Math.round((distance / width) * 120), 50, 120);
 
       flipOverlay.classList.remove('hidden', 'flip-next', 'flip-prev');
       shot.style.transform = `translate3d(${startOffsetX}px, 0, 0)`;
@@ -1315,6 +1458,7 @@
       settleSwipeMotion();
       updateTopStatus();
       schedulePageRender();
+      saveSessionState();
 
       window.setTimeout(() => {
         state.isAnimating = false;
@@ -1336,6 +1480,7 @@
       settleSwipeMotion();
       updateTopStatus();
       schedulePageRender();
+      saveSessionState();
 
       window.requestAnimationFrame(() => {
         state.isAnimating = false;
@@ -1346,11 +1491,76 @@
     const nextPage = () => goToPage(state.currentPage + 1, 'next');
     const prevPage = () => goToPage(state.currentPage - 1, 'prev');
 
-    const jumpToPage = () => {
+    const jumpToPage = (requestedPage) => {
       if (state.mode === 'idle') return;
-      const requested = Math.max(1, Number(pageInput.value || 1));
+      const requested = Math.max(1, Math.min(state.pageCount, requestedPage || 1));
       if (requested === state.currentPage) return;
       void goToPage(requested, requested > state.currentPage ? 'next' : 'prev');
+    };
+
+    // 点击页码显示区域进入编辑模式
+    let pageEditActive = false;
+    const startPageEdit = () => {
+      if (state.mode === 'idle' || pageEditActive) return;
+      pageEditActive = true;
+      pageDisplay.classList.add('editing');
+      const input = document.createElement('input');
+      input.type = 'number';
+      input.className = 'page-input-edit';
+      input.min = '1';
+      input.max = String(state.pageCount);
+      input.value = String(state.currentPage);
+      input.setAttribute('aria-label', '输入页码');
+      pageDisplay.innerHTML = '';
+      pageDisplay.appendChild(input);
+      input.focus();
+      input.select();
+
+      const commitEdit = () => {
+        if (!pageEditActive) return;
+        pageEditActive = false;
+        pageDisplay.classList.remove('editing');
+        const val = parseInt(input.value, 10);
+        // 恢复显示模式
+        rebuildPageDisplay();
+        if (!isNaN(val) && val >= 1 && val <= state.pageCount) {
+          jumpToPage(val);
+        }
+      };
+
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          commitEdit();
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          pageEditActive = false;
+          pageDisplay.classList.remove('editing');
+          rebuildPageDisplay();
+        }
+      });
+      input.addEventListener('blur', commitEdit);
+    };
+
+    const rebuildPageDisplay = () => {
+      pageDisplay.innerHTML = '';
+      const curSpan = document.createElement('span');
+      curSpan.id = 'pageCurDisplay';
+      curSpan.className = 'page-cur';
+      curSpan.textContent = String(state.currentPage);
+      const sepSpan = document.createElement('span');
+      sepSpan.className = 'page-sep';
+      sepSpan.textContent = '/';
+      const totalSpan = document.createElement('span');
+      totalSpan.id = 'pageTotalDisplay';
+      totalSpan.className = 'page-total';
+      totalSpan.textContent = String(state.pageCount);
+      pageDisplay.appendChild(curSpan);
+      pageDisplay.appendChild(sepSpan);
+      pageDisplay.appendChild(totalSpan);
+      // 更新引用
+      window._pageCurDisplay = curSpan;
+      window._pageTotalDisplay = totalSpan;
     };
 
     const resetViewer = async () => {
@@ -1422,6 +1632,16 @@
       await renderCurrentPage();
       updateTopStatus();
       setFooter(`已加载图片曲谱，共 ${state.pageCount} 页`);
+
+      // 持久化：保存图片文件到 IndexedDB
+      try {
+        const buffers = await Promise.all(sorted.map((f) => f.arrayBuffer()));
+        await idbPut('currentFiles', buffers);
+        await idbDelete('currentFile');
+        saveSessionState();
+      } catch (e) {
+        console.warn('保存图片到 IndexedDB 失败', e);
+      }
     };
 
     const setPdfSong = async (file) => {
@@ -1444,6 +1664,15 @@
       await renderCurrentPage();
       updateTopStatus();
       setFooter(`PDF 已加载，共 ${state.pageCount} 页`);
+
+      // 持久化：保存 PDF 文件到 IndexedDB
+      try {
+        await idbPut('currentFile', buffer);
+        await idbDelete('currentFiles');
+        saveSessionState();
+      } catch (e) {
+        console.warn('保存 PDF 到 IndexedDB 失败', e);
+      }
     };
 
     const loadFiles = async (rawFiles) => {
@@ -1496,7 +1725,7 @@
       if (state.zoom > 1.01) {
         if (xRatio > 0.3 && xRatio < 0.7) {
           const now = performance.now();
-          const windowMs = pointerType === 'mouse' ? 320 : 420;
+          const windowMs = pointerType === 'mouse' ? 360 : 500;
           if (now - state.centerTapAt < windowMs) {
             resetZoomAndPan();
             return;
@@ -1515,6 +1744,7 @@
         void nextPage();
         return;
       }
+      // 单击中间区域隐藏/显示 UI
       hideUI(!state.uiHidden);
     };
 
@@ -1542,13 +1772,19 @@
       return [points[0], points[1]];
     };
 
+    const isInteractiveTarget = (target) => {
+      if (!(target instanceof Element)) return false;
+      return Boolean(target.closest('button, input, select, textarea, label, a, .page-display, .thumbnail-panel, .thumbnail-shade, .thumbnail-close'));
+    };
+
     const onPointerDown = (event) => {
       if (event.button !== 0 && event.pointerType === 'mouse') return;
+      if (isInteractiveTarget(event.target)) return;
       if (state.thumbnailPanelOpen && (thumbnailPanel.contains(event.target) || thumbnailShade.contains(event.target))) {
         return;
       }
 
-      if (event.pointerType !== 'mouse' && event.preventDefault) {
+      if (event.cancelable && event.preventDefault) {
         event.preventDefault();
       }
 
@@ -1594,7 +1830,7 @@
     const onPointerMove = (event) => {
       if (!state.pointers.has(event.pointerId)) return;
 
-      if (event.pointerType !== 'mouse' && event.preventDefault) {
+      if (event.cancelable && event.preventDefault) {
         event.preventDefault();
       }
 
@@ -1645,7 +1881,8 @@
         const absX = Math.abs(dx);
         const absY = Math.abs(dy);
 
-        if (absX > 8 && absX > absY * 1.08) {
+        // 降低滑动预览触发阈值，使滑动反馈更灵敏
+        if (absX > 6 && absX > absY * 1.1) {
           state.gesture.moved = true;
           setSwipePreview(dx);
         }
@@ -1714,11 +1951,12 @@
       const absY = Math.abs(dy);
       const dt = performance.now() - start.t;
       const isTouchLike = event.pointerType !== 'mouse';
-      const tapDistance = isTouchLike ? 24 : 18;
+      const tapDistance = isTouchLike ? 20 : 14;
       const tapDuration = isTouchLike ? 380 : 260;
 
-      if (absX > 54 && absX > absY * 1.25) {
-        const threshold = Math.max(52, Math.floor(stageInner.getBoundingClientRect().width * 0.16));
+      // 降低滑动阈值：18px 起步即可触发，水平/垂直比 1.15
+      if (absX > 18 && absX > absY * 1.15) {
+        const threshold = Math.max(18, Math.floor(stageInner.getBoundingClientRect().width * 0.08));
 
         if (state.swipeActive) {
           if (absX >= threshold) {
@@ -1738,16 +1976,6 @@
         }
 
         if (dx < 0) {
-          void nextPage();
-        } else {
-          void prevPage();
-        }
-        finalizePointerState();
-        return;
-      }
-
-      if (absY > 54 && absY > absX * 1.25) {
-        if (dy < 0) {
           void nextPage();
         } else {
           void prevPage();
@@ -1831,16 +2059,16 @@
           try {
             if ('createImageBitmap' in window) {
               const blob = await (await fetch(sourceUrl)).blob();
-              const bitmap = await createImageBitmap(blob);
-              const scale = Math.min(160 / bitmap.width, 220 / bitmap.height, 1);
+              const bitmap = await createImageBitmap(blob, { resizeWidth: 100, resizeHeight: 140, resizeQuality: 'low' });
               const canvas = document.createElement('canvas');
-              canvas.width = Math.max(1, Math.round(bitmap.width * scale));
-              canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+              canvas.width = bitmap.width;
+              canvas.height = bitmap.height;
               const ctx = canvas.getContext('2d', { alpha: false });
               if (ctx) {
-                ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-                url = canvas.toDataURL('image/jpeg', 0.8);
+                ctx.drawImage(bitmap, 0, 0);
+                url = canvas.toDataURL('image/jpeg', 0.7);
               }
+              bitmap.close();
             } else {
               const img = new Image();
               img.decoding = 'async';
@@ -1849,14 +2077,14 @@
                 img.onload = () => resolve();
                 img.onerror = () => reject();
               });
-              const scale = Math.min(160 / img.width, 220 / img.height, 1);
+              const scale = Math.min(100 / img.width, 140 / img.height, 1);
               const canvas = document.createElement('canvas');
               canvas.width = Math.max(1, Math.round(img.width * scale));
               canvas.height = Math.max(1, Math.round(img.height * scale));
               const ctx = canvas.getContext('2d', { alpha: false });
               if (ctx) {
                 ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                url = canvas.toDataURL('image/jpeg', 0.8);
+                url = canvas.toDataURL('image/jpeg', 0.7);
               }
             }
           } catch (error) {
@@ -1866,7 +2094,7 @@
       } else if (state.mode === 'pdf' && state.pdfDoc) {
         const page = await state.pdfDoc.getPage(pageNumber);
         const viewport = page.getViewport({ scale: 1 });
-        const thumbScale = Math.min(120 / viewport.width, 160 / viewport.height);
+        const thumbScale = Math.min(90 / viewport.width, 120 / viewport.height);
         const thumbViewport = page.getViewport({ scale: thumbScale });
 
         const canvas = document.createElement('canvas');
@@ -1875,7 +2103,7 @@
         const ctx = canvas.getContext('2d', { alpha: false });
         if (ctx) {
           await page.render({ canvasContext: ctx, canvas, viewport: thumbViewport }).promise;
-          url = canvas.toDataURL('image/jpeg', 0.85);
+          url = canvas.toDataURL('image/jpeg', 0.72);
         }
       }
 
@@ -1886,17 +2114,93 @@
     };
 
     let thumbnailObserver = null;
+    let thumbnailSentinel = null;
+    let thumbnailSentinelObserver = null;
+
+    const buildThumbnailItem = (i, renderToken) => {
+      const item = document.createElement('div');
+      item.className = `thumbnail-item ${i === state.currentPage ? 'current' : ''}`;
+      item.addEventListener('click', () => {
+        if (i !== state.currentPage) {
+          void goToPageInstant(i);
+        }
+        closeThumbnailPanel();
+      });
+      item.dataset.page = String(i);
+
+      const img = document.createElement('img');
+      img.className = 'thumbnail-thumb';
+      img.alt = `第 ${i} 页`;
+      img.style.opacity = '0.55';
+
+      const label = document.createElement('div');
+      label.className = 'thumbnail-page';
+      label.textContent = `第 ${i} 页`;
+
+      item.appendChild(img);
+      item.appendChild(label);
+
+      // 使用 IntersectionObserver 懒加载缩略图图像
+      if (thumbnailObserver) {
+        thumbnailObserver.observe(item);
+      }
+      return item;
+    };
+
+    const BATCH_SIZE = 10;
+    let currentBatchEnd = 0;
+
+    const addNextBatch = (renderToken) => {
+      const start = currentBatchEnd + 1;
+      const end = Math.min(start + BATCH_SIZE - 1, state.pageCount);
+      if (start > state.pageCount || renderToken !== state.thumbnailRenderToken) return;
+
+      const fragment = document.createDocumentFragment();
+      for (let i = start; i <= end; i++) {
+        fragment.appendChild(buildThumbnailItem(i, renderToken));
+      }
+
+      // 移除哨兵（如果有），添加新项目，再添加哨兵
+      if (thumbnailSentinel && thumbnailSentinel.parentNode) {
+        thumbnailGrid.insertBefore(fragment, thumbnailSentinel);
+      } else {
+        thumbnailGrid.appendChild(fragment);
+      }
+
+      currentBatchEnd = end;
+
+      // 如果还有更多页面，添加哨兵元素
+      if (currentBatchEnd < state.pageCount) {
+        if (!thumbnailSentinel) {
+          thumbnailSentinel = document.createElement('div');
+          thumbnailSentinel.style.height = '1px';
+          thumbnailSentinel.style.width = '100%';
+        }
+        thumbnailGrid.appendChild(thumbnailSentinel);
+        if (thumbnailSentinelObserver) {
+          thumbnailSentinelObserver.observe(thumbnailSentinel);
+        }
+      } else if (thumbnailSentinelObserver) {
+        thumbnailSentinelObserver.disconnect();
+      }
+    };
 
     const buildThumbnailGrid = async () => {
       if (state.mode === 'idle') return;
 
       thumbnailGrid.innerHTML = '';
-      const count = state.pageCount;
+      currentBatchEnd = 0;
       const renderToken = ++state.thumbnailRenderToken;
 
+      // 断开旧的观察者
       if (thumbnailObserver) {
         thumbnailObserver.disconnect();
       }
+      if (thumbnailSentinelObserver) {
+        thumbnailSentinelObserver.disconnect();
+      }
+
+      // 缩略图图像懒加载观察器
       thumbnailObserver = new IntersectionObserver(
         (entries) => {
           for (const entry of entries) {
@@ -1918,42 +2222,31 @@
             thumbnailObserver.unobserve(item);
           }
         },
-        { root: thumbnailGrid, rootMargin: '160px 0px', threshold: 0.01 },
+        { root: thumbnailGrid, rootMargin: '120px 0px', threshold: 0.01 },
       );
 
+      // 列数：根据容器宽度自适应
       let colCount = 1;
-      if (count > 4) colCount = 2;
-      if (count > 12) colCount = 3;
+      const panelWidth = thumbnailGrid.clientWidth || 300;
+      if (panelWidth > 200) colCount = 2;
+      if (panelWidth > 340) colCount = 3;
 
       thumbnailGrid.style.gridTemplateColumns = `repeat(${colCount}, minmax(0, 1fr))`;
 
-      for (let i = 1; i <= count; i++) {
-        const item = document.createElement('div');
-        item.className = `thumbnail-item ${i === state.currentPage ? 'current' : ''}`;
-        item.addEventListener('click', () => {
-          if (i !== state.currentPage) {
-            void goToPageInstant(i);
+      // 先创建哨兵观察器，再渲染第一批（addNextBatch 内部需要它来观察哨兵）
+      thumbnailSentinelObserver = new IntersectionObserver(
+        (entries) => {
+          for (const entry of entries) {
+            if (entry.isIntersecting && renderToken === state.thumbnailRenderToken) {
+              addNextBatch(renderToken);
+            }
           }
-          closeThumbnailPanel();
-        });
+        },
+        { root: thumbnailGrid, rootMargin: '200px 0px', threshold: 0.01 },
+      );
 
-        item.dataset.page = String(i);
-
-        const img = document.createElement('img');
-        img.className = 'thumbnail-thumb';
-        img.alt = `第 ${i} 页`;
-        img.style.opacity = '0.55';
-
-        const label = document.createElement('div');
-        label.className = 'thumbnail-page';
-        label.textContent = `第 ${i} 页`;
-
-        item.appendChild(img);
-        item.appendChild(label);
-        thumbnailGrid.appendChild(item);
-
-        thumbnailObserver.observe(item);
-      }
+      // 渲染第一批
+      addNextBatch(renderToken);
     };
 
     const openThumbnailPanel = async () => {
@@ -1976,6 +2269,10 @@
       if (thumbnailObserver) {
         thumbnailObserver.disconnect();
       }
+      if (thumbnailSentinelObserver) {
+        thumbnailSentinelObserver.disconnect();
+      }
+      currentBatchEnd = 0;
       thumbnailShade.classList.remove('open');
       thumbnailPanel.classList.remove('open');
       thumbnailShade.setAttribute('aria-hidden', 'true');
@@ -1984,6 +2281,7 @@
         if (!state.thumbnailPanelOpen) {
           thumbnailShade.classList.add('hidden');
           thumbnailPanel.classList.add('hidden');
+          thumbnailGrid.innerHTML = '';
         }
       }, 240);
     };
@@ -1993,8 +2291,22 @@
       fileInput.value = '';
     });
 
-    pageJumpBtn.addEventListener('click', () => {
-      jumpToPage();
+    pageDisplay.addEventListener('click', () => {
+      startPageEdit();
+    });
+
+    // 在 document 级别拦截 dragover/drop，防止 Edge 在拖放到页面非 shell 区域时打开新窗口
+    document.addEventListener('dragover', (event) => {
+      event.preventDefault();
+      event.dataTransfer.dropEffect = 'copy';
+    });
+    document.addEventListener('drop', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      // 只有当 drop 不在 shell 内部时，才在此处理（shell 自己会处理内部 drop）
+      if (!shell.contains(event.target) && event.dataTransfer?.files?.length) {
+        void loadFiles(event.dataTransfer.files);
+      }
     });
 
     shell.addEventListener('dragenter', (event) => {
@@ -2009,6 +2321,7 @@
     shell.addEventListener('dragover', (event) => {
       event.preventDefault();
       event.stopPropagation();
+      event.dataTransfer.dropEffect = 'copy';
       if (!state.dragOver) {
         shell.classList.add('dragover');
         state.dragOver = true;
@@ -2025,7 +2338,13 @@
     });
 
     shell.addEventListener('drop', handleDrop);
+
+    // pointermove 在 stageInner 上监听，在下面添加
     stageInner.addEventListener('pointerdown', onPointerDown);
+    shell.addEventListener('pointerdown', (event) => {
+      if (stageInner.contains(event.target)) return;
+      onPointerDown(event);
+    });
     stageInner.addEventListener('pointerup', onPointerUp);
     stageInner.addEventListener('pointercancel', onPointerUp);
     stageInner.addEventListener('mousedown', onMouseDown);
@@ -2067,18 +2386,10 @@
     }, { passive: true });
 
     resetBtn.addEventListener('click', () => {
+      localStorage.removeItem(SESSION_META_KEY);
+      idbDelete('currentFile').catch(() => {});
+      idbDelete('currentFiles').catch(() => {});
       void resetViewer();
-    });
-
-    pageInput.addEventListener('change', () => {
-      jumpToPage();
-    });
-
-    pageInput.addEventListener('keydown', (event) => {
-      if (event.key === 'Enter') {
-        event.preventDefault();
-        jumpToPage();
-      }
     });
 
     document.addEventListener('fullscreenchange', updateTopStatus);
@@ -2118,7 +2429,26 @@
     stageInner.addEventListener('wheel', onWheel, { passive: false });
     stageInner.addEventListener('pointermove', onPointerMove);
 
+    // 在 document 级别也监听 pointermove，确保滑动翻页时即使手指滑出 stage 也能正常跟踪
+    document.addEventListener('pointermove', (event) => {
+      if (state.pointers.has(event.pointerId)) {
+        onPointerMove(event);
+      }
+    }, { passive: false });
+    document.addEventListener('pointerup', (event) => {
+      if (state.pointers.has(event.pointerId)) {
+        onPointerUp(event);
+      }
+    });
+    document.addEventListener('pointercancel', (event) => {
+      if (state.pointers.has(event.pointerId)) {
+        onPointerUp(event);
+      }
+    });
+
     window.addEventListener('beforeunload', () => {
+      // 保存当前状态
+      saveSessionState();
       clearPdfCache();
       revokeAllUrls();
       if (state.pdfDoc) {
@@ -2126,7 +2456,116 @@
       }
     });
 
-    void resetViewer();
+    // ============ 会话持久化 ============
+    const SESSION_DB_NAME = 'music-score-viewer-session';
+    const SESSION_DB_STORE = 'files';
+    const SESSION_META_KEY = 'music-score-viewer-meta';
+
+    const openSessionDB = () => new Promise((resolve, reject) => {
+      const req = indexedDB.open(SESSION_DB_NAME, 1);
+      req.onupgradeneeded = () => {
+        req.result.createObjectStore(SESSION_DB_STORE);
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+
+    const idbPut = async (key, value) => {
+      const db = await openSessionDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(SESSION_DB_STORE, 'readwrite');
+        tx.objectStore(SESSION_DB_STORE).put(value, key);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+    };
+
+    const idbGet = async (key) => {
+      const db = await openSessionDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(SESSION_DB_STORE, 'readonly');
+        const req = tx.objectStore(SESSION_DB_STORE).get(key);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    };
+
+    const idbDelete = async (key) => {
+      const db = await openSessionDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(SESSION_DB_STORE, 'readwrite');
+        tx.objectStore(SESSION_DB_STORE).delete(key);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+    };
+
+    const saveSessionState = () => {
+      if (state.mode === 'idle' || state.pageCount === 0) return;
+      try {
+        const meta = {
+          mode: state.mode,
+          title: state.title,
+          currentPage: state.currentPage,
+          pageCount: state.pageCount,
+          savedAt: Date.now(),
+        };
+        localStorage.setItem(SESSION_META_KEY, JSON.stringify(meta));
+      } catch (_) { /* ignore quota errors */ }
+    };
+
+    void resetViewer().then(async () => {
+      // 尝试恢复上次会话
+      let meta = null;
+      try {
+        const raw = localStorage.getItem(SESSION_META_KEY);
+        if (raw) meta = JSON.parse(raw);
+      } catch (_) { /* ignore */ }
+
+      if (!meta || !meta.mode || !meta.pageCount) return;
+
+      // 检查存储的数据是否在 24 小时内
+      if (Date.now() - (meta.savedAt || 0) > 24 * 60 * 60 * 1000) {
+        localStorage.removeItem(SESSION_META_KEY);
+        return;
+      }
+
+      try {
+        if (meta.mode === 'pdf') {
+          const buffer = await idbGet('currentFile');
+          if (!buffer) {
+            localStorage.removeItem(SESSION_META_KEY);
+            return;
+          }
+          setFooter('正在恢复上次会话...');
+          const file = new File([buffer], meta.title || 'document.pdf', { type: 'application/pdf' });
+          await setPdfSong(file);
+          // 保存文件引用以便后续恢复
+          state._restoredFileBuffer = buffer;
+        } else if (meta.mode === 'image') {
+          const buffers = await idbGet('currentFiles');
+          if (!buffers || !Array.isArray(buffers) || buffers.length === 0) {
+            localStorage.removeItem(SESSION_META_KEY);
+            return;
+          }
+          setFooter('正在恢复上次会话...');
+          const files = buffers.map((buf, i) =>
+            new File([buf], `image-${i}.jpg`, { type: 'image/jpeg' })
+          );
+          await setImageSong(files);
+        }
+
+        // 恢复页码
+        if (meta.currentPage && meta.currentPage > 1 && meta.currentPage <= state.pageCount) {
+          void goToPageInstant(meta.currentPage);
+        }
+        setFooter(`已恢复上次会话：${state.title}，第 ${state.currentPage} / ${state.pageCount} 页`);
+      } catch (e) {
+        console.warn('恢复会话失败', e);
+        localStorage.removeItem(SESSION_META_KEY);
+      }
+    });
+
   </script>
 </body>
 </html>
