@@ -1,4 +1,4 @@
-﻿# 乐谱查看器（离线单入口版）
+﻿# 乐谱查看器
 
 这是一个离线可用的单入口项目：入口页面是 `index.html`，本地依赖统一放在 `vendor/` 子文件夹。
 
@@ -55,6 +55,8 @@ music-score-upload-viewer/
     - 点击 “全屏” 进入沉浸式浏览
     - 点击 👁️ 打开面部识别面板并按提示启动
   ![面部识别](549e8518637651734d69499bf6c989ab.png)
+  面部识别原理见：
+  - [Principle of Facial Recognition.md](Principle%20of%20Facial%20Recognition.md)
 
 ## 交互说明
 
@@ -87,6 +89,6 @@ music-score-upload-viewer/
 - 无网络环境下的临时演示
 - 需要“零部署”交付的轻量工具场景
 
-## 面部识别文档
+## 面部识别原理
 
 - [Principle of Facial Recognition.md](Principle%20of%20Facial%20Recognition.md)
