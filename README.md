@@ -55,6 +55,7 @@ music-score-upload-viewer/
     - 点击 “全屏” 进入沉浸式浏览
     - 点击 👁️ 打开面部识别面板并按提示启动
   ![面部识别](549e8518637651734d69499bf6c989ab.png)
+  
   面部识别原理见：
   - [Principle of Facial Recognition.md](Principle%20of%20Facial%20Recognition.md)
 

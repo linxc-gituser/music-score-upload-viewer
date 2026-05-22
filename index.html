@@ -14,6 +14,74 @@
       --danger: #ff9aa8;
       --shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
       --radius: 22px;
+      --app-bg: radial-gradient(120% 90% at 50% 0%, #36405f 0%, #171b2d 42%, #0f1220 100%);
+      --shell-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.04));
+      --shell-border: rgba(255, 255, 255, 0.1);
+      --topbar-bg: linear-gradient(180deg, rgba(16, 20, 34, 0.58), rgba(16, 20, 34, 0.36));
+      --topbar-border: rgba(255, 255, 255, 0.12);
+      --topbar-shadow: 0 12px 36px rgba(0, 0, 0, 0.22);
+      --divider: rgba(255, 255, 255, 0.12);
+      --control-bg: rgba(255, 255, 255, 0.06);
+      --control-bg-hover: rgba(255, 255, 255, 0.1);
+      --control-border: var(--line);
+      --control-border-hover: rgba(255, 255, 255, 0.24);
+      --stage-bg: rgba(0, 0, 0, 0.18);
+      --overlay-bg: rgba(0, 0, 0, 0.18);
+      --footer-bg: rgba(0, 0, 0, 0.32);
+      --shade-bg: rgba(5, 8, 14, 0.36);
+      --panel-bg: linear-gradient(180deg, rgba(15, 18, 28, 0.94), rgba(10, 13, 21, 0.92));
+      --panel-border: rgba(255, 255, 255, 0.1);
+      --thumbnail-item-bg: rgba(255, 255, 255, 0.03);
+      --thumbnail-item-border: rgba(255, 255, 255, 0.08);
+      --thumbnail-item-hover-bg: rgba(255, 255, 255, 0.05);
+      --thumbnail-item-hover-border: rgba(255, 255, 255, 0.18);
+      --thumbnail-item-active-bg: rgba(140, 200, 255, 0.08);
+      --thumbnail-item-active-border: rgba(140, 200, 255, 0.45);
+      --thumbnail-thumb-bg: rgba(0, 0, 0, 0.18);
+      --face-overlay-bg: rgba(8, 10, 18, 0.72);
+      --face-panel-bg: linear-gradient(180deg, rgba(18, 22, 36, 0.96), rgba(14, 18, 30, 0.93));
+      --face-preview-bg: #0a0d18;
+      --face-placeholder-bg: rgba(10, 12, 20, 0.8);
+      --face-section-bg: rgba(12, 15, 26, 0.85);
+    }
+
+    :root[data-theme="day"] {
+      color-scheme: light;
+      --line: rgba(26, 34, 48, 0.22);
+      --text: #1b2230;
+      --muted: rgba(27, 34, 48, 0.62);
+      --accent: #2f6ad9;
+      --danger: #d9455d;
+      --shadow: 0 20px 60px rgba(9, 14, 25, 0.12);
+      --app-bg: radial-gradient(120% 90% at 50% 0%, #f3f6ff 0%, #e6ecf7 52%, #dfe6f5 100%);
+      --shell-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(255, 255, 255, 0.72));
+      --shell-border: rgba(19, 24, 38, 0.08);
+      --topbar-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(245, 248, 255, 0.78));
+      --topbar-border: rgba(13, 20, 35, 0.08);
+      --topbar-shadow: 0 12px 36px rgba(12, 18, 30, 0.12);
+      --divider: rgba(22, 30, 44, 0.12);
+      --control-bg: rgba(22, 30, 44, 0.06);
+      --control-bg-hover: rgba(22, 30, 44, 0.12);
+      --control-border: rgba(22, 30, 44, 0.18);
+      --control-border-hover: rgba(22, 30, 44, 0.28);
+      --stage-bg: rgba(255, 255, 255, 0.55);
+      --overlay-bg: rgba(240, 243, 250, 0.65);
+      --footer-bg: rgba(255, 255, 255, 0.7);
+      --shade-bg: rgba(228, 232, 243, 0.6);
+      --panel-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(245, 248, 255, 0.9));
+      --panel-border: rgba(19, 24, 38, 0.08);
+      --thumbnail-item-bg: rgba(22, 30, 44, 0.04);
+      --thumbnail-item-border: rgba(22, 30, 44, 0.1);
+      --thumbnail-item-hover-bg: rgba(22, 30, 44, 0.08);
+      --thumbnail-item-hover-border: rgba(22, 30, 44, 0.18);
+      --thumbnail-item-active-bg: rgba(47, 106, 217, 0.12);
+      --thumbnail-item-active-border: rgba(47, 106, 217, 0.4);
+      --thumbnail-thumb-bg: rgba(22, 30, 44, 0.08);
+      --face-overlay-bg: rgba(235, 239, 248, 0.85);
+      --face-panel-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(246, 248, 252, 0.93));
+      --face-preview-bg: #edf1f8;
+      --face-placeholder-bg: rgba(233, 238, 248, 0.82);
+      --face-section-bg: rgba(255, 255, 255, 0.82);
     }
 
     * {
@@ -26,7 +94,7 @@
       height: 100%;
       margin: 0;
       color: var(--text);
-      background: radial-gradient(120% 90% at 50% 0%, #36405f 0%, #171b2d 42%, #0f1220 100%);
+      background: var(--app-bg);
       font-family: "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
       overflow: hidden;
     }
@@ -66,9 +134,9 @@
       position: relative;
       width: 100%;
       height: 100%;
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      border: 1px solid var(--shell-border);
       border-radius: 28px;
-      background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.04));
+      background: var(--shell-bg);
       box-shadow: var(--shadow);
       overflow: hidden;
       backdrop-filter: blur(18px);
@@ -101,12 +169,12 @@
       align-items: center;
       gap: 8px;
       padding: 8px 12px;
-      border: 1px solid rgba(255, 255, 255, 0.12);
+      border: 1px solid var(--topbar-border);
       border-radius: 20px;
-      background: linear-gradient(180deg, rgba(16, 20, 34, 0.58), rgba(16, 20, 34, 0.36));
+      background: var(--topbar-bg);
       backdrop-filter: blur(24px) saturate(145%);
       -webkit-backdrop-filter: blur(24px) saturate(145%);
-      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.22);
+      box-shadow: var(--topbar-shadow);
       transition: transform 0.28s ease, opacity 0.28s ease, background 0.28s ease;
       flex-wrap: nowrap;
     }
@@ -131,7 +199,7 @@
       flex: 0 0 auto;
       width: 1px;
       height: 22px;
-      background: rgba(255, 255, 255, 0.12);
+      background: var(--divider);
       margin: 0 2px;
     }
 
@@ -150,8 +218,8 @@
       gap: 0;
       height: 38px;
       border-radius: 999px;
-      border: 1px solid var(--line);
-      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--control-border);
+      background: var(--control-bg);
       color: var(--text);
       white-space: nowrap;
       padding: 0 14px;
@@ -164,8 +232,8 @@
     }
 
     .page-display:hover {
-      background: rgba(255, 255, 255, 0.1);
-      border-color: rgba(255, 255, 255, 0.24);
+      background: var(--control-bg-hover);
+      border-color: var(--control-border-hover);
     }
 
     .page-display .page-cur {
@@ -195,7 +263,7 @@
       height: 26px;
       border: none;
       border-radius: 6px;
-      background: rgba(255, 255, 255, 0.12);
+      background: var(--control-bg-hover);
       color: var(--text);
       text-align: center;
       font-size: 13px;
@@ -209,8 +277,8 @@
     .select {
       height: 38px;
       border-radius: 999px;
-      border: 1px solid var(--line);
-      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--control-border);
+      background: var(--control-bg);
       color: var(--text);
       white-space: nowrap;
       transition: transform 0.18s ease, background 0.18s ease, border-color 0.18s ease, opacity 0.18s ease;
@@ -219,8 +287,8 @@
     .btn:hover,
     .field:hover,
     .select:hover {
-      background: rgba(255, 255, 255, 0.1);
-      border-color: rgba(255, 255, 255, 0.24);
+      background: var(--control-bg-hover);
+      border-color: var(--control-border-hover);
     }
 
     .btn {
@@ -293,7 +361,7 @@
       height: 100%;
       border: none;
       border-radius: 0;
-      background: rgba(0, 0, 0, 0.18);
+      background: var(--stage-bg);
       overflow: hidden;
       display: grid;
       place-items: center;
@@ -508,7 +576,7 @@
       pointer-events: none;
       display: grid;
       place-items: center;
-      background: rgba(0, 0, 0, 0.18);
+      background: var(--overlay-bg);
       z-index: 12;
     }
 
@@ -516,7 +584,7 @@
       position: absolute;
       inset: 0;
       z-index: 29;
-      background: rgba(5, 8, 14, 0.36);
+      background: var(--shade-bg);
       opacity: 0;
       pointer-events: none;
       transition: opacity 0.18s ease;
@@ -555,8 +623,8 @@
       height: 100%;
       display: flex;
       flex-direction: column;
-      background: linear-gradient(180deg, rgba(15, 18, 28, 0.94), rgba(10, 13, 21, 0.92));
-      border-left: 1px solid rgba(255, 255, 255, 0.1);
+      background: var(--panel-bg);
+      border-left: 1px solid var(--panel-border);
       overflow: hidden;
     }
 
@@ -595,20 +663,20 @@
       cursor: pointer;
       border-radius: 12px;
       padding: 6px;
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--thumbnail-item-border);
+      background: var(--thumbnail-item-bg);
       transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
     }
 
     .thumbnail-item:hover {
       transform: translateY(-1px);
-      border-color: rgba(255, 255, 255, 0.18);
-      background: rgba(255, 255, 255, 0.05);
+      border-color: var(--thumbnail-item-hover-border);
+      background: var(--thumbnail-item-hover-bg);
     }
 
     .thumbnail-item.current {
-      border-color: rgba(140, 200, 255, 0.45);
-      background: rgba(140, 200, 255, 0.08);
+      border-color: var(--thumbnail-item-active-border);
+      background: var(--thumbnail-item-active-bg);
     }
 
     .thumbnail-thumb {
@@ -616,12 +684,12 @@
       aspect-ratio: 3 / 4;
       border-radius: 8px;
       object-fit: contain;
-      background: rgba(0, 0, 0, 0.18);
+      background: var(--thumbnail-thumb-bg);
       display: block;
     }
 
     .thumbnail-page {
-      color: rgba(245, 247, 255, 0.82);
+      color: var(--muted);
       font-size: 12px;
       text-align: center;
       white-space: nowrap;
@@ -655,9 +723,9 @@
       gap: 10px;
       padding: 9px 14px;
       border-radius: 999px;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      background: rgba(0, 0, 0, 0.32);
-      color: rgba(245, 247, 255, 0.92);
+      border: 1px solid var(--panel-border);
+      background: var(--footer-bg);
+      color: var(--text);
       font-size: 12px;
       max-width: calc(100% - 32px);
       white-space: nowrap;
@@ -693,7 +761,7 @@
       display: grid;
       place-items: center;
       padding: 16px;
-      background: rgba(8, 10, 18, 0.72);
+      background: var(--face-overlay-bg);
       backdrop-filter: blur(10px);
     }
 
@@ -703,8 +771,8 @@
       display: flex;
       flex-direction: column;
       border-radius: 22px;
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      background: linear-gradient(180deg, rgba(18, 22, 36, 0.96), rgba(14, 18, 30, 0.93));
+      border: 1px solid var(--panel-border);
+      background: var(--face-panel-bg);
       box-shadow: var(--shadow);
       overflow: hidden;
     }
@@ -715,7 +783,7 @@
       justify-content: space-between;
       gap: 12px;
       padding: 12px 16px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      border-bottom: 1px solid var(--panel-border);
     }
 
     .face-title {
@@ -776,8 +844,8 @@
       position: relative;
       min-height: 240px;
       border-radius: 16px;
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      background: #0a0d18;
+      border: 1px solid var(--panel-border);
+      background: var(--face-preview-bg);
       overflow: hidden;
     }
 
@@ -803,7 +871,7 @@
       align-items: center;
       justify-content: center;
       gap: 12px;
-      background: rgba(10, 12, 20, 0.8);
+      background: var(--face-placeholder-bg);
       color: var(--muted);
       text-align: center;
       transition: opacity 0.2s ease;
@@ -846,8 +914,8 @@
 
     .face-section {
       border-radius: 16px;
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      background: rgba(12, 15, 26, 0.85);
+      border: 1px solid var(--panel-border);
+      background: var(--face-section-bg);
       overflow: hidden;
       display: flex;
       flex-direction: column;
@@ -855,7 +923,7 @@
 
     .face-section-header {
       padding: 10px 12px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      border-bottom: 1px solid var(--panel-border);
       font-size: 11px;
       letter-spacing: 0.12em;
       text-transform: uppercase;
@@ -1580,6 +1648,11 @@
     };
 
     const FACE_PREF_KEY = 'music-score-viewer-face';
+    const THEME_KEY = 'music-score-viewer-theme';
+    const THEME_DAY = 'day';
+    const THEME_NIGHT = 'night';
+    let themeLongPressTimer = 0;
+    let themeLongPressTriggered = false;
 
     const FACE_SMOOTH = { eye: { atk: 0.06, rel: 0.4 }, mouth: { atk: 0.18, rel: 0.45 } };
     const FACE_SMD = 0.5;
@@ -2228,6 +2301,41 @@
       footer.textContent = text;
       footer.classList.toggle('status', true);
       footer.classList.toggle('error', isError);
+    };
+
+    const applyTheme = (theme, { persist = true, announce = false } = {}) => {
+      const nextTheme = theme === THEME_DAY ? THEME_DAY : THEME_NIGHT;
+      if (nextTheme === THEME_DAY) {
+        document.documentElement.dataset.theme = THEME_DAY;
+      } else {
+        delete document.documentElement.dataset.theme;
+      }
+      if (persist) {
+        try {
+          localStorage.setItem(THEME_KEY, nextTheme);
+        } catch (_) {
+          /* ignore */
+        }
+      }
+      if (announce) {
+        setFooter(nextTheme === THEME_DAY ? '已切换为日间主题' : '已切换为夜间主题');
+      }
+    };
+
+    const loadTheme = () => {
+      try {
+        const saved = localStorage.getItem(THEME_KEY);
+        if (saved) {
+          applyTheme(saved, { persist: false, announce: false });
+        }
+      } catch (_) {
+        /* ignore */
+      }
+    };
+
+    const toggleTheme = () => {
+      const current = document.documentElement.dataset.theme === THEME_DAY ? THEME_DAY : THEME_NIGHT;
+      applyTheme(current === THEME_DAY ? THEME_NIGHT : THEME_DAY, { announce: true });
     };
 
     const hideUI = (value) => {
@@ -3845,6 +3953,7 @@
       void nextPage();
     });
 
+    loadTheme();
     loadFacePrefs();
     buildFaceBlendshapePanel();
     buildFaceThresholdPanel();
@@ -3909,7 +4018,37 @@
       saveFacePrefs();
     });
 
-    fullscreenBtn.addEventListener('click', () => {
+    const startThemeLongPress = (event) => {
+      if (event.button !== undefined && event.button !== 0) return;
+      themeLongPressTriggered = false;
+      window.clearTimeout(themeLongPressTimer);
+      themeLongPressTimer = window.setTimeout(() => {
+        themeLongPressTriggered = true;
+        toggleTheme();
+        window.setTimeout(() => {
+          themeLongPressTriggered = false;
+        }, 600);
+      }, 520);
+    };
+
+    const cancelThemeLongPress = () => {
+      if (themeLongPressTimer) {
+        window.clearTimeout(themeLongPressTimer);
+        themeLongPressTimer = 0;
+      }
+    };
+
+    fullscreenBtn.addEventListener('pointerdown', startThemeLongPress);
+    fullscreenBtn.addEventListener('pointerup', cancelThemeLongPress);
+    fullscreenBtn.addEventListener('pointerleave', cancelThemeLongPress);
+    fullscreenBtn.addEventListener('pointercancel', cancelThemeLongPress);
+
+    fullscreenBtn.addEventListener('click', (event) => {
+      if (themeLongPressTriggered) {
+        themeLongPressTriggered = false;
+        event.preventDefault();
+        return;
+      }
       void toggleFullscreen();
     });
 
