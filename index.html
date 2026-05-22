@@ -1,0 +1,3859 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="dark light" />
+  <title>乐谱查看器</title>
+  <style>
+    :root {
+      --line: rgba(255, 255, 255, 0.14);
+      --text: #f5f7ff;
+      --muted: rgba(245, 247, 255, 0.72);
+      --accent: #8cc8ff;
+      --danger: #ff9aa8;
+      --shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+      --radius: 22px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      color: var(--text);
+      background: radial-gradient(120% 90% at 50% 0%, #36405f 0%, #171b2d 42%, #0f1220 100%);
+      font-family: "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      overflow: hidden;
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+    }
+
+    .shell,
+    .stage,
+    .stage-inner,
+    .topbar,
+    .footer,
+    .empty {
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .topbar input,
+    .topbar textarea,
+    .page-input-edit {
+      user-select: text;
+      -webkit-user-select: text;
+    }
+
+    .app {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      padding: 16px;
+      transition: padding 0.28s ease;
+    }
+
+    .shell {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 28px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.04));
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      backdrop-filter: blur(18px);
+      transition: border-radius 0.28s ease, border-color 0.28s ease;
+    }
+
+    .shell:fullscreen,
+    .shell:-webkit-full-screen {
+      border-radius: 0;
+      border-color: transparent;
+    }
+
+    .shell:fullscreen .app,
+    .shell:-webkit-full-screen .app {
+      padding: 0;
+    }
+
+    .shell.dragover {
+      outline: 2px solid rgba(140, 200, 255, 0.8);
+      outline-offset: -2px;
+    }
+
+    .topbar {
+      position: absolute;
+      left: 16px;
+      right: 16px;
+      top: 16px;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 20px;
+      background: linear-gradient(180deg, rgba(16, 20, 34, 0.58), rgba(16, 20, 34, 0.36));
+      backdrop-filter: blur(24px) saturate(145%);
+      -webkit-backdrop-filter: blur(24px) saturate(145%);
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.22);
+      transition: transform 0.28s ease, opacity 0.28s ease, background 0.28s ease;
+      flex-wrap: nowrap;
+    }
+
+    .topbar.ui-hidden {
+      opacity: 0;
+      transform: translateY(-18px);
+      pointer-events: none;
+    }
+
+    .file-name {
+      flex: 1 1 auto;
+      min-width: 0;
+      font-size: 12px;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .topbar-spacer {
+      flex: 0 0 auto;
+      width: 1px;
+      height: 22px;
+      background: rgba(255, 255, 255, 0.12);
+      margin: 0 2px;
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: nowrap;
+      min-width: 0;
+    }
+
+    .page-display {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      height: 38px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text);
+      white-space: nowrap;
+      padding: 0 14px;
+      font-size: 13px;
+      font-variant-numeric: tabular-nums;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.18s ease, border-color 0.18s ease;
+      gap: 0;
+    }
+
+    .page-display:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.24);
+    }
+
+    .page-display .page-cur {
+      display: inline-block;
+      min-width: 24px;
+      text-align: right;
+    }
+
+    .page-display .page-sep {
+      display: inline-block;
+      margin: 0 2px;
+      opacity: 0.55;
+    }
+
+    .page-display .page-total {
+      display: inline-block;
+      min-width: 24px;
+      text-align: left;
+    }
+
+    .page-display.editing {
+      padding: 0 4px;
+    }
+
+    .page-display .page-input-edit {
+      width: 40px;
+      height: 26px;
+      border: none;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.12);
+      color: var(--text);
+      text-align: center;
+      font-size: 13px;
+      font-variant-numeric: tabular-nums;
+      padding: 0 2px;
+      outline: none;
+    }
+
+    .btn,
+    .field,
+    .select {
+      height: 38px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text);
+      white-space: nowrap;
+      transition: transform 0.18s ease, background 0.18s ease, border-color 0.18s ease, opacity 0.18s ease;
+    }
+
+    .btn:hover,
+    .field:hover,
+    .select:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.24);
+    }
+
+    .btn {
+      padding: 0 14px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      user-select: none;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .btn:active {
+      transform: translateY(1px);
+    }
+
+    .btn.primary {
+      background: linear-gradient(135deg, rgba(140, 200, 255, 0.22), rgba(155, 231, 196, 0.18));
+      border-color: rgba(140, 200, 255, 0.28);
+    }
+
+    .btn[disabled] {
+      opacity: 0.45;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .file-input {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      border: 0;
+    }
+
+    .select,
+    .field {
+      padding: 0 12px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .field {
+      width: 92px;
+      text-align: center;
+    }
+
+    .stage {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 0;
+      transition: padding 0.28s ease;
+    }
+
+    .shell:fullscreen .stage,
+    .shell:-webkit-full-screen .stage {
+      padding: 0;
+    }
+
+    .stage-inner {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      border: none;
+      border-radius: 0;
+      background: rgba(0, 0, 0, 0.18);
+      overflow: hidden;
+      display: grid;
+      place-items: center;
+      touch-action: none;
+      transition: border-radius 0.28s ease, background 0.28s ease;
+    }
+
+    .shell:fullscreen .stage-inner,
+    .shell:-webkit-full-screen .stage-inner {
+      border-radius: 0;
+    }
+
+    .edge-hit {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 40%;
+      z-index: 8;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      tap-highlight-color: transparent;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .edge-hit.left {
+      left: 0;
+      background: transparent;
+    }
+
+    .edge-hit.right {
+      right: 0;
+      background: transparent;
+    }
+
+    .empty {
+      width: min(820px, calc(100% - 32px));
+      text-align: center;
+      padding: 32px 24px;
+      z-index: 6;
+    }
+
+    .empty .title {
+      margin: 0;
+      font-size: clamp(22px, 3vw, 34px);
+      font-weight: 800;
+      letter-spacing: 0.02em;
+    }
+
+    .empty .desc {
+      margin: 16px auto 0;
+      max-width: 52ch;
+      color: var(--muted);
+      line-height: 1.65;
+      font-size: 14px;
+    }
+
+    .empty .hint {
+      margin-top: 18px;
+      color: var(--accent);
+      font-size: 13px;
+    }
+
+    .page-back,
+    .page-layer,
+    .page-media,
+    .flip-overlay {
+      position: absolute;
+      inset: 0;
+    }
+
+    .page-back {
+      z-index: 4;
+      display: grid;
+      place-items: center;
+      will-change: transform, opacity;
+      padding: 0;
+      transform: translateZ(0);
+      backface-visibility: hidden;
+      contain: paint;
+      pointer-events: none;
+    }
+
+    .page-back .page-media {
+      opacity: 0.98;
+    }
+
+    .page-layer {
+      z-index: 5;
+      display: grid;
+      place-items: center;
+      will-change: transform, opacity;
+      padding: 0;
+      transform: translateZ(0);
+      backface-visibility: hidden;
+      contain: paint;
+    }
+
+    .page-media {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      user-select: none;
+      background: transparent;
+      pointer-events: none;
+      transform-origin: center center;
+      will-change: transform;
+      transform: translateZ(0);
+      backface-visibility: hidden;
+      cursor: grab;
+    }
+
+    .flip-overlay {
+      z-index: 9;
+      pointer-events: none;
+      display: grid;
+      place-items: center;
+      will-change: transform, opacity;
+      padding: 0;
+      transform: translateZ(0);
+      backface-visibility: hidden;
+      contain: paint;
+    }
+
+    .flip-overlay img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      pointer-events: none;
+      transform: translateZ(0);
+      backface-visibility: hidden;
+    }
+
+    .page-back,
+    .page-layer,
+    .edge-hit {
+      -webkit-tap-highlight-color: transparent;
+      tap-highlight-color: transparent;
+    }
+
+    @keyframes flip-out-next {
+      from {
+        opacity: 1;
+        transform: translate3d(0, 0, 0) scale(1);
+      }
+
+      to {
+        opacity: 0;
+        transform: translate3d(-100%, 0, 0) scale(1);
+      }
+    }
+
+    @keyframes flip-out-prev {
+      from {
+        opacity: 1;
+        transform: translate3d(0, 0, 0) scale(1);
+      }
+
+      to {
+        opacity: 0;
+        transform: translate3d(100%, 0, 0) scale(1);
+      }
+    }
+
+    @keyframes page-in-next {
+      from {
+        opacity: 1;
+        transform: translate3d(0, 0, 0) scale(1);
+        filter: brightness(0.7);
+      }
+
+      to {
+        opacity: 1;
+        transform: translate3d(0, 0, 0) scale(1);
+        filter: brightness(1);
+      }
+    }
+
+    @keyframes page-in-prev {
+      from {
+        opacity: 1;
+        transform: translate3d(0, 0, 0) scale(1);
+        filter: brightness(0.7);
+      }
+
+      to {
+        opacity: 1;
+        transform: translate3d(0, 0, 0) scale(1);
+        filter: brightness(1);
+      }
+    }
+
+    .flip-next {
+      animation: flip-out-next 160ms linear forwards;
+    }
+
+    .flip-prev {
+      animation: flip-out-prev 160ms linear forwards;
+    }
+
+    .incoming-next {
+      animation: page-in-next 160ms linear;
+    }
+
+    .incoming-prev {
+      animation: page-in-prev 160ms linear;
+    }
+
+    .overlay {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      display: grid;
+      place-items: center;
+      background: rgba(0, 0, 0, 0.18);
+      z-index: 12;
+    }
+
+    .thumbnail-shade {
+      position: absolute;
+      inset: 0;
+      z-index: 29;
+      background: rgba(5, 8, 14, 0.36);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.18s ease;
+    }
+
+    .thumbnail-shade.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .thumbnail-panel {
+      position: absolute;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: min(410px, 42vw);
+      z-index: 30;
+      display: flex;
+      justify-content: flex-end;
+      pointer-events: none;
+      transform: translateX(18px);
+      opacity: 0;
+      transition: transform 0.22s ease, opacity 0.22s ease;
+      contain: layout paint;
+    }
+
+    .thumbnail-panel.open {
+      transform: translateX(0);
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .thumbnail-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      background: linear-gradient(180deg, rgba(15, 18, 28, 0.94), rgba(10, 13, 21, 0.92));
+      border-left: 1px solid rgba(255, 255, 255, 0.1);
+      overflow: hidden;
+    }
+
+    .thumbnail-close {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      z-index: 1;
+      width: 34px;
+      height: 34px;
+      border: 0;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    .thumbnail-grid {
+      flex: 1;
+      overflow: auto;
+      padding: 56px 12px 14px;
+      display: grid;
+      gap: 8px 8px;
+      align-content: start;
+      scrollbar-width: thin;
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
+      touch-action: pan-y;
+    }
+
+    .thumbnail-item {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 0;
+      cursor: pointer;
+      border-radius: 12px;
+      padding: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.03);
+      transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+    }
+
+    .thumbnail-item:hover {
+      transform: translateY(-1px);
+      border-color: rgba(255, 255, 255, 0.18);
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .thumbnail-item.current {
+      border-color: rgba(140, 200, 255, 0.45);
+      background: rgba(140, 200, 255, 0.08);
+    }
+
+    .thumbnail-thumb {
+      width: 100%;
+      aspect-ratio: 3 / 4;
+      border-radius: 8px;
+      object-fit: contain;
+      background: rgba(0, 0, 0, 0.18);
+      display: block;
+    }
+
+    .thumbnail-page {
+      color: rgba(245, 247, 255, 0.82);
+      font-size: 12px;
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: 3px solid rgba(255, 255, 255, 0.18);
+      border-top-color: var(--accent);
+      animation: spin 0.9s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .footer {
+      position: absolute;
+      left: 50%;
+      bottom: 18px;
+      transform: translateX(-50%);
+      z-index: 20;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(0, 0, 0, 0.32);
+      color: rgba(245, 247, 255, 0.92);
+      font-size: 12px;
+      max-width: calc(100% - 32px);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      transition: transform 0.28s ease, opacity 0.28s ease;
+    }
+
+    .footer.ui-hidden {
+      opacity: 0;
+      transform: translate(-50%, 16px);
+      pointer-events: none;
+    }
+
+    .stage-inner,
+    .edge-hit {
+      -webkit-tap-highlight-color: transparent;
+      tap-highlight-color: transparent;
+    }
+
+    .status.error {
+      color: var(--danger);
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .face-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 40;
+      display: grid;
+      place-items: center;
+      padding: 16px;
+      background: rgba(8, 10, 18, 0.72);
+      backdrop-filter: blur(10px);
+    }
+
+    .face-panel {
+      width: min(1200px, 96vw);
+      height: min(90vh, 900px);
+      display: flex;
+      flex-direction: column;
+      border-radius: 22px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: linear-gradient(180deg, rgba(18, 22, 36, 0.96), rgba(14, 18, 30, 0.93));
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .face-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .face-title {
+      font-size: 12px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .face-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .face-pill {
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--muted);
+      transition: all 0.2s ease;
+    }
+
+    .face-pill.on {
+      color: #7cffb0;
+      border-color: rgba(124, 255, 176, 0.4);
+      background: rgba(124, 255, 176, 0.12);
+    }
+
+    .face-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 12px;
+      overflow: auto;
+    }
+
+    .face-top {
+      flex: 1;
+      display: grid;
+      grid-template-columns: minmax(0, 1.3fr) minmax(0, 0.9fr);
+      gap: 12px;
+    }
+
+    .face-bottom {
+      flex: 1;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 12px;
+    }
+
+    .face-preview {
+      position: relative;
+      min-height: 240px;
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: #0a0d18;
+      overflow: hidden;
+    }
+
+    .face-video,
+    .face-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transform: scaleX(-1);
+    }
+
+    .face-canvas {
+      pointer-events: none;
+    }
+
+    .face-placeholder {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      background: rgba(10, 12, 20, 0.8);
+      color: var(--muted);
+      text-align: center;
+      transition: opacity 0.2s ease;
+    }
+
+    .face-placeholder.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .face-preview-tools {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      z-index: 2;
+    }
+
+    .face-toggle-btn {
+      height: 26px;
+      padding: 0 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--muted);
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .face-toggle-btn.on {
+      color: var(--text);
+      border-color: rgba(140, 200, 255, 0.4);
+      background: rgba(140, 200, 255, 0.18);
+    }
+
+    .face-section {
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(12, 15, 26, 0.85);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .face-section-header {
+      padding: 10px 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .face-section-header.split {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .face-mode-group {
+      display: inline-flex;
+      gap: 4px;
+    }
+
+    .face-mode-btn {
+      height: 22px;
+      padding: 0 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--muted);
+      font-size: 9px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .face-mode-btn.active {
+      color: var(--text);
+      border-color: rgba(255, 255, 255, 0.4);
+      background: rgba(255, 255, 255, 0.16);
+    }
+
+    .face-section-body {
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      overflow: auto;
+    }
+
+    .face-action-strip {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .face-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 6px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.04);
+      transition: all 0.2s ease;
+      text-align: center;
+    }
+
+    .face-card .face-emoji {
+      font-size: 20px;
+      opacity: 0.35;
+      filter: grayscale(1);
+      transition: all 0.2s ease;
+    }
+
+    .face-card .face-label {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .face-card .face-score {
+      font-size: 10px;
+      color: var(--muted);
+    }
+
+    .face-card.active-left {
+      border-color: rgba(140, 200, 255, 0.4);
+      background: rgba(140, 200, 255, 0.14);
+    }
+
+    .face-card.active-left .face-emoji {
+      opacity: 1;
+      filter: none;
+    }
+
+    .face-card.active-left .face-label,
+    .face-card.active-left .face-score {
+      color: var(--accent);
+    }
+
+    .face-card.active-right {
+      border-color: rgba(255, 154, 168, 0.42);
+      background: rgba(255, 154, 168, 0.16);
+    }
+
+    .face-card.active-right .face-emoji {
+      opacity: 1;
+      filter: none;
+    }
+
+    .face-card.active-right .face-label,
+    .face-card.active-right .face-score {
+      color: var(--danger);
+    }
+
+    .face-subtitle {
+      margin-top: 6px;
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      padding-top: 10px;
+    }
+
+    .face-bs-group {
+      font-size: 10px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-top: 10px;
+      padding-bottom: 4px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .face-bs-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .face-bs-label {
+      min-width: 64px;
+      white-space: nowrap;
+    }
+
+    .face-bs-track {
+      flex: 1;
+      height: 4px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.08);
+      overflow: hidden;
+    }
+
+    .face-bs-fill {
+      height: 100%;
+      width: 0;
+      border-radius: 999px;
+      transition: width 0.08s ease;
+    }
+
+    .face-bs-fill.l {
+      background: linear-gradient(90deg, #7fb6ff, #9fdcff);
+    }
+
+    .face-bs-fill.r {
+      background: linear-gradient(90deg, #ff91b2, #ffb5c8);
+    }
+
+    .face-bs-fill.b {
+      background: linear-gradient(90deg, #b08cff, #c9b1ff);
+    }
+
+    .face-bs-fill.n {
+      background: linear-gradient(90deg, rgba(245, 247, 255, 0.4), rgba(245, 247, 255, 0.8));
+    }
+
+    .face-bs-value {
+      min-width: 32px;
+      text-align: right;
+      font-size: 10px;
+      color: var(--muted);
+    }
+
+    .face-thr-row {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .face-thr-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .face-section input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 4px;
+      border-radius: 2px;
+      background: rgba(255, 255, 255, 0.08);
+      outline: none;
+    }
+
+    .face-section input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--text);
+      cursor: pointer;
+      border: 2px solid rgba(0, 0, 0, 0.4);
+    }
+
+    .face-fps {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .face-fps-value {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--accent);
+      line-height: 1;
+    }
+
+    .face-debug {
+      font-size: 10px;
+      line-height: 1.6;
+      color: var(--muted);
+    }
+
+    .face-debug-row {
+      display: flex;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      padding: 2px 0;
+    }
+
+    .face-debug-row:last-child {
+      border-bottom: none;
+    }
+
+    @media (max-width: 980px) {
+      .face-top,
+      .face-bottom {
+        grid-template-columns: 1fr;
+      }
+
+      .face-panel {
+        height: 92vh;
+      }
+    }
+
+    @media (max-width: 1200px) {
+      .topbar {
+        left: 12px;
+        right: 12px;
+        top: 12px;
+        gap: 7px;
+        padding: 7px 11px;
+      }
+
+      .btn {
+        padding: 0 10px;
+        font-size: 13px;
+      }
+    }
+
+    @media (max-width: 860px) {
+      .topbar {
+        left: 8px;
+        right: 8px;
+        top: 8px;
+        gap: 6px;
+        padding: 6px 9px;
+        border-radius: 16px;
+      }
+
+      .btn,
+      .field,
+      .select {
+        height: 34px;
+        font-size: 12.5px;
+      }
+
+      .btn {
+        padding: 0 9px;
+        gap: 5px;
+      }
+
+      .file-name {
+        font-size: 11.5px;
+      }
+
+      .topbar-spacer {
+        height: 18px;
+        margin: 0 1px;
+      }
+
+      .page-display {
+        height: 34px;
+        padding: 0 9px;
+        font-size: 12.5px;
+      }
+
+      .page-display .page-input-edit {
+        width: 34px;
+        height: 24px;
+        font-size: 12px;
+      }
+
+      .empty {
+        width: calc(100% - 20px);
+        padding: 24px 16px;
+      }
+
+      .empty .title {
+        font-size: clamp(18px, 6vw, 28px);
+      }
+
+      .empty .desc {
+        font-size: 13px;
+      }
+
+      .footer {
+        bottom: 10px;
+        font-size: 11px;
+        padding: 7px 12px;
+        max-width: calc(100% - 20px);
+      }
+
+      .thumbnail-panel {
+        width: min(360px, 52vw);
+      }
+
+      .thumbnail-grid {
+        padding: 50px 10px 12px;
+        gap: 6px;
+      }
+
+      .thumbnail-thumb {
+        aspect-ratio: 3 / 4;
+      }
+
+      .thumbnail-page {
+        font-size: 11px;
+      }
+
+      .edge-hit {
+        width: 30%;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .topbar {
+        left: 4px;
+        right: 4px;
+        top: 4px;
+        gap: 4px;
+        padding: 5px 6px;
+        border-radius: 12px;
+      }
+
+      .btn,
+      .field,
+      .select {
+        height: 30px;
+        font-size: 11.5px;
+      }
+
+      .btn {
+        padding: 0 6px;
+        gap: 3px;
+      }
+
+      .file-name {
+        font-size: 10.5px;
+      }
+
+      .topbar-spacer {
+        display: none;
+      }
+
+      .page-display {
+        height: 30px;
+        padding: 0 6px;
+        font-size: 11.5px;
+      }
+
+      .page-display .page-input-edit {
+        width: 28px;
+        height: 20px;
+        font-size: 11px;
+      }
+
+      .empty .title {
+        font-size: clamp(16px, 5.5vw, 24px);
+      }
+
+      .empty .desc {
+        font-size: 12px;
+      }
+
+      .empty .hint {
+        font-size: 11px;
+      }
+
+      .footer {
+        bottom: 8px;
+        font-size: 10px;
+        padding: 6px 10px;
+        max-width: calc(100% - 12px);
+      }
+
+      .thumbnail-panel {
+        width: min(300px, 68vw);
+      }
+
+      .thumbnail-grid {
+        padding: 46px 8px 10px;
+        gap: 5px;
+      }
+
+      .thumbnail-close {
+        width: 30px;
+        height: 30px;
+        font-size: 12px;
+      }
+
+      .edge-hit {
+        width: 28%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="shell" class="shell" tabindex="0" aria-label="乐谱查看器">
+    <header id="topbar" class="topbar">
+      <label class="btn primary" for="fileInput">上传</label>
+      <input id="fileInput" class="file-input" type="file" accept="image/*,application/pdf" multiple />
+
+      <div id="pageDisplay" class="page-display" aria-label="页码，点击跳转" title="点击输入页码跳转">
+        <span id="pageCurDisplay" class="page-cur">1</span>
+        <span class="page-sep">/</span>
+        <span id="pageTotalDisplay" class="page-total">0</span>
+      </div>
+
+      <span id="fileName" class="file-name">未加载文件</span>
+
+      <div class="topbar-spacer"></div>
+
+      <button id="thumbnailBtn" class="btn" type="button" aria-label="显示缩略图">📋</button>
+      <button id="faceBtn" class="btn" type="button" aria-label="面部识别设置">👁️</button>
+      <button id="fullscreenBtn" class="btn" type="button">全屏</button>
+      <button id="resetBtn" class="btn" type="button">清空</button>
+    </header>
+
+    <main class="stage">
+      <section id="stageInner" class="stage-inner">
+        <div class="edge-hit left" id="leftEdge" aria-label="上一页"></div>
+        <div class="edge-hit right" id="rightEdge" aria-label="下一页"></div>
+
+        <div id="emptyState" class="empty">
+          <p class="title">把图片或 PDF 拖到这里</p>
+          <p class="desc">
+            统一单页阅读引擎：图片和 PDF 都会渲染为同一种页面视觉。
+            支持点击左右边缘翻页、全屏滑动翻页，并保持舞台不超出显示区域。
+          </p>
+          <p class="hint">支持一次导入多张图片，按文件名顺序作为同一首曲子阅读。</p>
+        </div>
+
+        <div id="backPageLayer" class="page-back hidden" aria-hidden="true">
+          <img id="backPageImage" class="page-media hidden" alt="下一页预览" draggable="false" />
+        </div>
+
+        <div id="pageLayer" class="page-layer hidden">
+          <img id="pageImage" class="page-media hidden" alt="乐谱页面" draggable="false" />
+        </div>
+
+        <div id="flipOverlay" class="flip-overlay hidden"></div>
+
+        <div id="loadingOverlay" class="overlay hidden" aria-hidden="true">
+          <div class="spinner"></div>
+        </div>
+      </section>
+    </main>
+
+    <!-- 缩略图面板移到 stage 外部，避免 stage-inner 的 touch-action:none 影响缩略图滚动 -->
+    <div id="thumbnailShade" class="thumbnail-shade hidden" aria-hidden="true"></div>
+    <div id="thumbnailPanel" class="thumbnail-panel hidden" aria-hidden="true">
+      <div class="thumbnail-container">
+        <button class="thumbnail-close" aria-label="关闭缩略图">✕</button>
+        <div id="thumbnailGrid" class="thumbnail-grid"></div>
+      </div>
+    </div>
+
+    <div id="faceOverlay" class="face-overlay hidden" aria-hidden="true">
+      <div class="face-panel" role="dialog" aria-label="面部识别配置">
+        <div class="face-header">
+          <div class="face-title">面部识别</div>
+          <div class="face-header-actions">
+            <span id="faceStatus" class="face-pill">Standby</span>
+            <button id="faceClose" class="btn" type="button" aria-label="关闭面部识别">✕</button>
+          </div>
+        </div>
+        <div class="face-body">
+          <div class="face-top">
+            <div class="face-preview">
+              <video id="faceVideo" class="face-video" autoplay playsinline muted></video>
+              <canvas id="faceCanvas" class="face-canvas"></canvas>
+              <div id="facePlaceholder" class="face-placeholder">
+                <p>需要摄像头权限</p>
+                <button id="faceStartBtn" class="btn primary" type="button">启动识别</button>
+              </div>
+              <div class="face-preview-tools">
+                <button id="faceEnableBtn" class="face-toggle-btn on" type="button" aria-label="开启面部翻页">翻页: 开</button>
+                <button id="faceMeshBtn" class="face-toggle-btn on" type="button" aria-label="显示关键点连线">关键点: 开</button>
+              </div>
+            </div>
+            <div class="face-section">
+              <div class="face-section-header split">
+                <span>动作识别</span>
+                <div class="face-mode-group">
+                  <button id="faceModeWink" class="face-mode-btn" type="button">Wink</button>
+                  <button id="faceModePucker" class="face-mode-btn" type="button">Pucker</button>
+                  <button id="faceModeBoth" class="face-mode-btn" type="button">Both</button>
+                </div>
+              </div>
+              <div class="face-section-body">
+                <div class="face-action-strip">
+                  <div class="face-card" id="faceCardWinkL">
+                    <div class="face-emoji">😜</div>
+                    <div class="face-label">左眼 Wink</div>
+                    <div class="face-score" id="faceScoreWinkL">0%</div>
+                  </div>
+                  <div class="face-card" id="faceCardWinkR">
+                    <div class="face-emoji">😉</div>
+                    <div class="face-label">右眼 Wink</div>
+                    <div class="face-score" id="faceScoreWinkR">0%</div>
+                  </div>
+                  <div class="face-card" id="faceCardPuckerL">
+                    <div class="face-emoji">😗</div>
+                    <div class="face-label">向左撅嘴</div>
+                    <div class="face-score" id="faceScorePuckerL">0%</div>
+                  </div>
+                  <div class="face-card" id="faceCardPuckerR">
+                    <div class="face-emoji">😙</div>
+                    <div class="face-label">向右撅嘴</div>
+                    <div class="face-score" id="faceScorePuckerR">0%</div>
+                  </div>
+                </div>
+                <div class="face-subtitle">Blendshape 系数</div>
+                <div id="faceBlendshapePanel"></div>
+              </div>
+            </div>
+          </div>
+          <div class="face-bottom">
+            <div class="face-section">
+              <div class="face-section-header">灵敏度调节</div>
+              <div class="face-section-body" id="faceThresholdPanel"></div>
+            </div>
+            <div class="face-section">
+              <div class="face-section-header">性能与原始值</div>
+              <div class="face-section-body">
+                <div class="face-fps">
+                  <span>FPS</span>
+                  <span id="faceFpsValue" class="face-fps-value">--</span>
+                </div>
+                <div id="faceDebugPanel" class="face-debug"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="footer" class="footer">等待上传文件</div>
+  </div>
+
+  <script type="module">
+    import * as pdfjsLib from './vendor/pdfjs/pdf.min.js';
+
+    // 指定本地 worker 文件
+    pdfjsLib.GlobalWorkerOptions.workerSrc = './vendor/pdfjs/pdf.worker.min.js';
+
+    const shell = document.getElementById('shell');
+    const topbar = document.getElementById('topbar');
+    const stageInner = document.getElementById('stageInner');
+    const leftEdge = document.getElementById('leftEdge');
+    const rightEdge = document.getElementById('rightEdge');
+    const emptyState = document.getElementById('emptyState');
+    const backPageLayer = document.getElementById('backPageLayer');
+    const backPageImage = document.getElementById('backPageImage');
+    const pageLayer = document.getElementById('pageLayer');
+    const pageImage = document.getElementById('pageImage');
+    const flipOverlay = document.getElementById('flipOverlay');
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    const thumbnailShade = document.getElementById('thumbnailShade');
+    const thumbnailPanel = document.getElementById('thumbnailPanel');
+    const thumbnailGrid = document.getElementById('thumbnailGrid');
+    const fileInput = document.getElementById('fileInput');
+    const fileName = document.getElementById('fileName');
+    const pageDisplay = document.getElementById('pageDisplay');
+    const pageCurDisplay = document.getElementById('pageCurDisplay');
+    const pageTotalDisplay = document.getElementById('pageTotalDisplay');
+    const thumbnailBtn = document.getElementById('thumbnailBtn');
+    const faceBtn = document.getElementById('faceBtn');
+    const fullscreenBtn = document.getElementById('fullscreenBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const footer = document.getElementById('footer');
+    const faceOverlay = document.getElementById('faceOverlay');
+    const faceClose = document.getElementById('faceClose');
+    const faceStatus = document.getElementById('faceStatus');
+    const faceVideo = document.getElementById('faceVideo');
+    const faceCanvas = document.getElementById('faceCanvas');
+    const facePlaceholder = document.getElementById('facePlaceholder');
+    const faceStartBtn = document.getElementById('faceStartBtn');
+    const faceEnableBtn = document.getElementById('faceEnableBtn');
+    const faceMeshBtn = document.getElementById('faceMeshBtn');
+    const faceModeWink = document.getElementById('faceModeWink');
+    const faceModePucker = document.getElementById('faceModePucker');
+    const faceModeBoth = document.getElementById('faceModeBoth');
+    const faceBlendshapePanel = document.getElementById('faceBlendshapePanel');
+    const faceThresholdPanel = document.getElementById('faceThresholdPanel');
+    const faceDebugPanel = document.getElementById('faceDebugPanel');
+    const faceFpsValue = document.getElementById('faceFpsValue');
+    const faceCardWinkL = document.getElementById('faceCardWinkL');
+    const faceCardWinkR = document.getElementById('faceCardWinkR');
+    const faceCardPuckerL = document.getElementById('faceCardPuckerL');
+    const faceCardPuckerR = document.getElementById('faceCardPuckerR');
+    const faceScoreWinkL = document.getElementById('faceScoreWinkL');
+    const faceScoreWinkR = document.getElementById('faceScoreWinkR');
+    const faceScorePuckerL = document.getElementById('faceScorePuckerL');
+    const faceScorePuckerR = document.getElementById('faceScorePuckerR');
+    const faceCanvasCtx = faceCanvas ? faceCanvas.getContext('2d') : null;
+
+    const state = {
+      mode: 'idle',
+      dragOver: false,
+      objectUrls: [],
+      imagePages: [],
+      pdfDoc: null,
+      pdfCache: new Map(),
+      pdfRenderQueue: new Map(),
+      pdfRenderToken: 0,
+      title: '',
+      currentPage: 1,
+      pageCount: 0,
+      zoom: 1,
+      panX: 0,
+      panY: 0,
+      pdfCacheVersion: 0,
+      zoomRerenderTimer: 0,
+      loadingTimer: 0,
+      pointers: new Map(),
+      gesture: null,
+      uiHidden: false,
+      isAnimating: false,
+      pointerEventActive: false,
+      mouseFallbackActive: false,
+      centerTapAt: 0,
+      swipeActive: false,
+      swipeDx: 0,
+      previewDirection: null,
+      backPreviewToken: 0,
+      thumbnailPanelOpen: false,
+      thumbnailCache: new Map(),
+      thumbnailRenderToken: 0,
+    };
+
+    const MIN_ZOOM = 0.75;
+    const MAX_ZOOM = 3;
+    const ZOOM_STEP = 0.12;
+    const PDF_RENDER_QUALITY = 0.82;
+
+    const FACE_JS_URLS = [
+      'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14',
+      'https://unpkg.com/@mediapipe/tasks-vision@0.10.14',
+    ];
+    const FACE_WASM_URLS = [
+      'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm',
+      'https://unpkg.com/@mediapipe/tasks-vision@0.10.14/wasm',
+    ];
+    const FACE_MODEL_SOURCES = [
+      { url: './models/face_landmarker.task', timeout: 3000 },
+      { url: 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task', timeout: 15000 },
+    ];
+
+    const FACE_BS_GROUPS = [
+      { title: '眼睛', items: [
+        { k: 'eyeBlinkLeft', l: '左眨眼', c: 'l' },
+        { k: 'eyeBlinkRight', l: '右眨眼', c: 'r' },
+        { k: 'eyeWideLeft', l: '左瞪大', c: 'l' },
+        { k: 'eyeWideRight', l: '右瞪大', c: 'r' },
+        { k: 'eyeSquintLeft', l: '左眯眼', c: 'l' },
+        { k: 'eyeSquintRight', l: '右眯眼', c: 'r' },
+      ] },
+      { title: '嘴巴', items: [
+        { k: 'mouthPucker', l: '嘟嘴', c: 'b' },
+        { k: 'mouthFunnel', l: '嘟嘴形', c: 'b' },
+        { k: 'mouthLeft', l: '嘴角左移', c: 'l' },
+        { k: 'mouthRight', l: '嘴角右移', c: 'r' },
+        { k: 'mouthSmileLeft', l: '左微笑', c: 'l' },
+        { k: 'mouthSmileRight', l: '右微笑', c: 'r' },
+        { k: 'mouthOpen', l: '嘴张开', c: 'n' },
+        { k: 'mouthFrownLeft', l: '左撇嘴', c: 'l' },
+        { k: 'mouthFrownRight', l: '右撇嘴', c: 'r' },
+      ] },
+    ];
+
+    const FACE_THRESHOLDS = {
+      blink: { value: 0.35, min: 0.02, max: 0.95, step: 0.01, label: '眨眼阈值' },
+      winkDiff: { value: 0.14, min: 0.02, max: 0.8, step: 0.01, label: 'Wink 差值阈值' },
+      pucker: { value: 0.25, min: 0.02, max: 0.9, step: 0.01, label: '撅嘴阈值' },
+      puckerBias: { value: 0.21, min: 0.01, max: 0.6, step: 0.01, label: '撅嘴偏移阈值' },
+    };
+
+    const FACE_PREF_KEY = 'music-score-viewer-face';
+
+    const FACE_SMOOTH = { eye: { atk: 0.06, rel: 0.4 }, mouth: { atk: 0.18, rel: 0.45 } };
+    const FACE_SMD = 0.5;
+    const FACE_HYST_ATK = 1.0;
+    const FACE_HYST_REL = 0.6;
+
+    const FACE_MESH = {
+      faceOval: [[10, 338], [338, 297], [297, 332], [332, 284], [284, 251], [251, 389], [389, 356], [356, 454], [454, 323], [323, 361], [361, 288], [288, 397], [397, 365], [365, 379], [379, 378], [378, 400], [400, 377], [377, 152], [152, 148], [148, 176], [176, 149], [149, 150], [150, 136], [136, 172], [172, 58], [58, 132], [132, 93], [93, 234], [234, 127], [127, 162], [162, 21], [21, 54], [54, 103], [103, 67], [67, 109], [109, 10]],
+      lEye: [[33, 7], [7, 163], [163, 144], [144, 145], [145, 153], [153, 154], [154, 155], [155, 133], [133, 173], [173, 157], [157, 158], [158, 159], [159, 160], [160, 161], [161, 246], [246, 33]],
+      rEye: [[362, 382], [382, 381], [381, 380], [380, 374], [374, 373], [373, 390], [390, 249], [249, 263], [263, 466], [466, 388], [388, 387], [387, 386], [386, 385], [385, 384], [384, 398], [398, 362]],
+      lBrow: [[276, 283], [283, 282], [282, 295], [295, 285], [285, 300], [300, 293], [293, 334], [334, 296], [296, 336]],
+      rBrow: [[46, 53], [53, 52], [52, 65], [65, 55], [55, 70], [70, 63], [63, 105], [105, 66], [66, 107]],
+      lips: [[61, 146], [146, 91], [91, 181], [181, 84], [84, 17], [17, 314], [314, 405], [405, 321], [321, 375], [375, 291], [291, 409], [409, 270], [270, 269], [269, 267], [267, 0], [0, 37], [37, 39], [39, 40], [40, 185], [185, 61]],
+      lipsIn: [[78, 191], [191, 80], [80, 81], [81, 82], [82, 13], [13, 312], [312, 311], [311, 310], [310, 415], [415, 308], [308, 324], [324, 318], [318, 402], [402, 317], [317, 14], [14, 87], [87, 178], [178, 88], [88, 95], [95, 78]],
+    };
+
+    const faceState = {
+      landmarker: null,
+      running: false,
+      enabled: true,
+      showMesh: true,
+      triggerMode: 'both',
+      pendingAction: null,
+      delayMs: 100,
+      stream: null,
+      modelUrl: '',
+      lastActionAt: 0,
+      cooldownMs: 800,
+      actionActive: { next: false, prev: false },
+      fpsFrames: 0,
+      fpsTime: performance.now(),
+      sm: {},
+      act: {},
+    };
+
+    const loadFacePrefs = () => {
+      try {
+        const raw = localStorage.getItem(FACE_PREF_KEY);
+        if (!raw) return;
+        const data = JSON.parse(raw);
+        const thresholds = data?.thresholds || {};
+        Object.entries(FACE_THRESHOLDS).forEach(([key, cfg]) => {
+          const val = thresholds[key];
+          if (typeof val !== 'number' || Number.isNaN(val)) return;
+          const clamped = Math.min(cfg.max, Math.max(cfg.min, val));
+          cfg.value = clamped;
+        });
+        if (typeof data?.enabled === 'boolean') faceState.enabled = data.enabled;
+        if (typeof data?.showMesh === 'boolean') faceState.showMesh = data.showMesh;
+        if (typeof data?.triggerMode === 'string') faceState.triggerMode = data.triggerMode;
+      } catch (_) {
+        /* ignore */
+      }
+    };
+
+    const saveFacePrefs = () => {
+      try {
+        const thresholds = {};
+        Object.entries(FACE_THRESHOLDS).forEach(([key, cfg]) => {
+          thresholds[key] = cfg.value;
+        });
+        localStorage.setItem(FACE_PREF_KEY, JSON.stringify({
+          thresholds,
+          enabled: faceState.enabled,
+          showMesh: faceState.showMesh,
+          triggerMode: faceState.triggerMode,
+        }));
+      } catch (_) {
+        /* ignore */
+      }
+    };
+
+    const setFaceStatus = (text, live) => {
+      if (!faceStatus) return;
+      faceStatus.textContent = text;
+      faceStatus.classList.toggle('on', Boolean(live));
+    };
+
+    const updateFaceStatus = () => {
+      if (!faceState.running) {
+        setFaceStatus('Standby', false);
+        return;
+      }
+      if (faceState.enabled) {
+        setFaceStatus('LIVE', true);
+      } else {
+        setFaceStatus('Paused', false);
+      }
+    };
+
+    const setFaceToggleButton = (button, enabled, label) => {
+      if (!button) return;
+      button.classList.toggle('on', enabled);
+      button.textContent = `${label}: ${enabled ? '开' : '关'}`;
+    };
+
+    const updateFaceToggleUI = () => {
+      setFaceToggleButton(faceEnableBtn, faceState.enabled, '翻页');
+      setFaceToggleButton(faceMeshBtn, faceState.showMesh, '关键点');
+      if (!faceState.showMesh) {
+        clearFaceCanvas();
+      }
+      updateFaceStatus();
+    };
+
+    const updateFaceModeUI = () => {
+      if (!faceModeWink || !faceModePucker || !faceModeBoth) return;
+      faceModeWink.classList.toggle('active', faceState.triggerMode === 'wink');
+      faceModePucker.classList.toggle('active', faceState.triggerMode === 'pucker');
+      faceModeBoth.classList.toggle('active', faceState.triggerMode === 'both');
+    };
+
+    const scheduleFaceAction = (type, direction, action) => {
+      if (!faceState.enabled) return;
+      const now = performance.now();
+      const pending = faceState.pendingAction;
+
+      if (pending) {
+        if (pending.type === 'wink' && type !== 'wink') {
+          return;
+        }
+        if (type === 'wink') {
+          pending.type = 'wink';
+          pending.direction = direction;
+          pending.action = action;
+          pending.at = now;
+        } else if (pending.type !== 'wink') {
+          pending.type = type;
+          pending.direction = direction;
+          pending.action = action;
+          pending.at = now;
+        }
+        window.clearTimeout(pending.timer);
+      } else {
+        faceState.pendingAction = {
+          type,
+          direction,
+          action,
+          at: now,
+          timer: 0,
+        };
+      }
+
+      const current = faceState.pendingAction;
+      current.timer = window.setTimeout(() => {
+        const executing = faceState.pendingAction;
+        faceState.pendingAction = null;
+        if (!executing) return;
+        if (performance.now() - faceState.lastActionAt < faceState.cooldownMs) return;
+        faceState.lastActionAt = performance.now();
+        executing.action();
+      }, faceState.delayMs);
+    };
+
+    const updateFaceActionState = (key, type, action) => {
+      const active = Boolean(type);
+      if (!faceState.enabled) {
+        faceState.actionActive[key] = false;
+        return;
+      }
+      if (active && !faceState.actionActive[key]) {
+        scheduleFaceAction(type, key, action);
+      }
+      faceState.actionActive[key] = active;
+    };
+
+    const clearFaceCanvas = () => {
+      if (!faceCanvasCtx || !faceCanvas) return;
+      faceCanvasCtx.clearRect(0, 0, faceCanvas.width, faceCanvas.height);
+    };
+
+    const drawFaceMesh = (landmarks) => {
+      if (!faceCanvasCtx || !faceCanvas) return;
+      const width = faceCanvas.width;
+      const height = faceCanvas.height;
+      faceCanvasCtx.clearRect(0, 0, width, height);
+      if (!faceState.showMesh || !landmarks) return;
+
+      const drawConnections = (connections, color, lineWidth) => {
+        faceCanvasCtx.strokeStyle = color;
+        faceCanvasCtx.lineWidth = lineWidth;
+        faceCanvasCtx.beginPath();
+        connections.forEach(([a, b]) => {
+          const p1 = landmarks[a];
+          const p2 = landmarks[b];
+          if (!p1 || !p2) return;
+          faceCanvasCtx.moveTo(p1.x * width, p1.y * height);
+          faceCanvasCtx.lineTo(p2.x * width, p2.y * height);
+        });
+        faceCanvasCtx.stroke();
+      };
+
+      drawConnections(FACE_MESH.faceOval, 'rgba(176, 140, 255, 0.28)', 1.1);
+      drawConnections(FACE_MESH.lEye, 'rgba(140, 200, 255, 0.45)', 1.1);
+      drawConnections(FACE_MESH.rEye, 'rgba(140, 200, 255, 0.45)', 1.1);
+      drawConnections(FACE_MESH.lBrow, 'rgba(140, 200, 255, 0.26)', 1.0);
+      drawConnections(FACE_MESH.rBrow, 'rgba(140, 200, 255, 0.26)', 1.0);
+      drawConnections(FACE_MESH.lips, 'rgba(255, 154, 168, 0.5)', 1.2);
+      drawConnections(FACE_MESH.lipsIn, 'rgba(255, 154, 168, 0.32)', 1.0);
+
+      const keyDots = [
+        [61, 'rgba(255, 154, 168, 0.9)', 'rgba(255, 154, 168, 0.12)'],
+        [291, 'rgba(255, 154, 168, 0.9)', 'rgba(255, 154, 168, 0.12)'],
+        [13, 'rgba(176, 140, 255, 0.9)', 'rgba(176, 140, 255, 0.12)'],
+        [14, 'rgba(176, 140, 255, 0.9)', 'rgba(176, 140, 255, 0.12)'],
+        [33, 'rgba(140, 200, 255, 0.9)', 'rgba(140, 200, 255, 0.12)'],
+        [263, 'rgba(140, 200, 255, 0.9)', 'rgba(140, 200, 255, 0.12)'],
+        [10, 'rgba(140, 200, 255, 0.7)', 'rgba(140, 200, 255, 0.1)'],
+        [152, 'rgba(176, 140, 255, 0.7)', 'rgba(176, 140, 255, 0.1)'],
+      ];
+      keyDots.forEach(([idx, strokeColor, fillColor]) => {
+        const point = landmarks[idx];
+        if (!point) return;
+        const x = point.x * width;
+        const y = point.y * height;
+        faceCanvasCtx.beginPath();
+        faceCanvasCtx.arc(x, y, 4, 0, Math.PI * 2);
+        faceCanvasCtx.fillStyle = fillColor;
+        faceCanvasCtx.fill();
+        faceCanvasCtx.beginPath();
+        faceCanvasCtx.arc(x, y, 2, 0, Math.PI * 2);
+        faceCanvasCtx.fillStyle = strokeColor;
+        faceCanvasCtx.fill();
+      });
+    };
+
+    const buildFaceBlendshapePanel = () => {
+      if (!faceBlendshapePanel) return;
+      let html = '';
+      for (const group of FACE_BS_GROUPS) {
+        html += `<div class="face-bs-group">${group.title}</div>`;
+        for (const item of group.items) {
+          html += `
+            <div class="face-bs-row">
+              <span class="face-bs-label">${item.l}</span>
+              <div class="face-bs-track"><div class="face-bs-fill ${item.c}" id="faceBs-${item.k}"></div></div>
+              <span class="face-bs-value" id="faceBv-${item.k}">0%</span>
+            </div>`;
+        }
+      }
+      faceBlendshapePanel.innerHTML = html;
+    };
+
+    const buildFaceThresholdPanel = () => {
+      if (!faceThresholdPanel) return;
+      let html = '';
+      Object.entries(FACE_THRESHOLDS).forEach(([key, cfg]) => {
+        html += `
+          <div class="face-thr-row">
+            <div class="face-thr-head">
+              <label>${cfg.label}</label>
+              <span id="faceTv-${key}">${cfg.value.toFixed(2)}</span>
+            </div>
+            <input type="range" min="${cfg.min}" max="${cfg.max}" step="${cfg.step}" value="${cfg.value}" data-k="${key}">
+          </div>`;
+      });
+      faceThresholdPanel.innerHTML = html;
+      faceThresholdPanel.querySelectorAll('input[type="range"]').forEach((input) => {
+        input.addEventListener('input', () => {
+          const k = input.dataset.k;
+          const cfg = FACE_THRESHOLDS[k];
+          cfg.value = parseFloat(input.value);
+          const label = document.getElementById(`faceTv-${k}`);
+          if (label) label.textContent = cfg.value.toFixed(2);
+          saveFacePrefs();
+        });
+      });
+    };
+
+    const faceValue = (list, name) => {
+      const item = list.find((entry) => entry.categoryName === name || entry.categoryName === `_${name}`);
+      return item ? item.score : 0;
+    };
+
+    const faceEmaAR = (key, raw, profile) => {
+      const p = FACE_SMOOTH[profile];
+      if (faceState.sm[key] === undefined) faceState.sm[key] = raw;
+      const f = raw > faceState.sm[key] ? p.atk : p.rel;
+      faceState.sm[key] = faceState.sm[key] * (1 - f) + raw * f;
+      return faceState.sm[key];
+    };
+
+    const faceEmaD = (key, raw) => {
+      if (faceState.sm[key] === undefined) faceState.sm[key] = raw;
+      faceState.sm[key] = faceState.sm[key] * (1 - FACE_SMD) + raw * FACE_SMD;
+      return faceState.sm[key];
+    };
+
+    const faceHyst = (key, raw, thr) => {
+      const cur = faceState.act[key] || false;
+      if (cur) {
+        if (raw < thr * FACE_HYST_REL) faceState.act[key] = false;
+      } else if (raw >= thr * FACE_HYST_ATK) {
+        faceState.act[key] = true;
+      }
+      return faceState.act[key];
+    };
+
+    const setFaceCard = (card, scoreEl, active, score, side) => {
+      if (!card || !scoreEl) return;
+      card.classList.toggle('active-left', active && side === 'left');
+      card.classList.toggle('active-right', active && side === 'right');
+      scoreEl.textContent = `${Math.round(score * 100)}%`;
+    };
+
+    const updateFaceBlendshapes = (list) => {
+      FACE_BS_GROUPS.forEach((group) => {
+        group.items.forEach((item) => {
+          const v = faceEmaD(`d_${item.k}`, faceValue(list, item.k));
+          const pct = Math.round(v * 100);
+          const fill = document.getElementById(`faceBs-${item.k}`);
+          const val = document.getElementById(`faceBv-${item.k}`);
+          if (fill) fill.style.width = `${pct}%`;
+          if (val) val.textContent = `${pct}%`;
+        });
+      });
+    };
+
+    const updateFaceDebug = (values) => {
+      if (!faceDebugPanel) return;
+      faceDebugPanel.innerHTML = values.map((item) => (
+        `<div class="face-debug-row"><span>${item.label}</span><span>${item.value}</span></div>`
+      )).join('');
+    };
+
+    const maybeTriggerFaceAction = (key, active, action) => {
+      if (!faceState.enabled) {
+        faceState.actionActive[key] = false;
+        return;
+      }
+      const now = performance.now();
+      if (active && !faceState.actionActive[key] && now - faceState.lastActionAt >= faceState.cooldownMs) {
+        faceState.lastActionAt = now;
+        action();
+      }
+      faceState.actionActive[key] = active;
+    };
+
+    const processFaceBlendshapes = (list) => {
+      const thBlink = FACE_THRESHOLDS.blink.value;
+      const thDiff = FACE_THRESHOLDS.winkDiff.value;
+      const thPuck = FACE_THRESHOLDS.pucker.value;
+      const thBias = FACE_THRESHOLDS.puckerBias.value;
+
+      const eBL = faceEmaAR('eBL', faceValue(list, 'eyeBlinkLeft'), 'eye');
+      const eBR = faceEmaAR('eBR', faceValue(list, 'eyeBlinkRight'), 'eye');
+      const avg = (eBL + eBR) / 2;
+      const diff = Math.abs(eBL - eBR);
+
+      const mP = faceEmaAR('mP', faceValue(list, 'mouthPucker'), 'mouth');
+      const mF = faceEmaAR('mF', faceValue(list, 'mouthFunnel'), 'mouth');
+      const mL = faceEmaAR('mL', faceValue(list, 'mouthLeft'), 'mouth');
+      const mR = faceEmaAR('mR', faceValue(list, 'mouthRight'), 'mouth');
+
+      const isBlink = faceHyst('bl', avg, thBlink) && diff < thDiff;
+      const isLWink = !isBlink && faceHyst('wl', eBL, thBlink) && diff >= thDiff;
+      const isRWink = !isBlink && faceHyst('wr', eBR, thBlink) && diff >= thDiff;
+
+      const puck = Math.max(mP, mF * 0.7);
+      const biasL = mL - mR;
+      const biasR = mR - mL;
+      const isLPuck = faceHyst('lp', puck, thPuck) && biasL >= thBias;
+      const isRPuck = faceHyst('rp', puck, thPuck) && biasR >= thBias;
+
+      const cWL = isLWink ? Math.min(diff / 0.5, 1) : 0;
+      const cWR = isRWink ? Math.min(diff / 0.5, 1) : 0;
+      const cPL = isLPuck ? Math.min((puck * Math.max(biasL, 0)) / 0.25, 1) : 0;
+      const cPR = isRPuck ? Math.min((puck * Math.max(biasR, 0)) / 0.25, 1) : 0;
+
+      setFaceCard(faceCardWinkL, faceScoreWinkL, isLWink, cWL, 'left');
+      setFaceCard(faceCardWinkR, faceScoreWinkR, isRWink, cWR, 'right');
+      setFaceCard(faceCardPuckerL, faceScorePuckerL, isLPuck, cPL, 'left');
+      setFaceCard(faceCardPuckerR, faceScorePuckerR, isRPuck, cPR, 'right');
+
+      const allowWink = faceState.triggerMode !== 'pucker';
+      const allowPucker = faceState.triggerMode !== 'wink';
+      const nextType = allowWink && isRWink ? 'wink' : (allowPucker && isLPuck ? 'pucker' : null);
+      const prevType = allowWink && isLWink ? 'wink' : (allowPucker && isRPuck ? 'pucker' : null);
+
+      updateFaceActionState('next', nextType, () => {
+        if (state.mode !== 'idle') void nextPage();
+      });
+      updateFaceActionState('prev', prevType, () => {
+        if (state.mode !== 'idle') void prevPage();
+      });
+
+      updateFaceBlendshapes(list);
+      updateFaceDebug([
+        { label: 'eyeBlinkL', value: `${faceValue(list, 'eyeBlinkLeft').toFixed(2)} → ${eBL.toFixed(2)}` },
+        { label: 'eyeBlinkR', value: `${faceValue(list, 'eyeBlinkRight').toFixed(2)} → ${eBR.toFixed(2)}` },
+        { label: 'mouthPucker', value: `${faceValue(list, 'mouthPucker').toFixed(2)} → ${mP.toFixed(2)}` },
+        { label: 'mouthFunnel', value: `${faceValue(list, 'mouthFunnel').toFixed(2)} → ${mF.toFixed(2)}` },
+        { label: 'mouthLeft', value: `${faceValue(list, 'mouthLeft').toFixed(2)} → ${mL.toFixed(2)}` },
+        { label: 'mouthRight', value: `${faceValue(list, 'mouthRight').toFixed(2)} → ${mR.toFixed(2)}` },
+      ]);
+    };
+
+    const updateFaceFps = () => {
+      faceState.fpsFrames += 1;
+      const now = performance.now();
+      if (now - faceState.fpsTime >= 1000) {
+        if (faceFpsValue) faceFpsValue.textContent = String(faceState.fpsFrames);
+        faceState.fpsFrames = 0;
+        faceState.fpsTime = now;
+      }
+    };
+
+    const faceLoop = () => {
+      if (!faceState.running || !faceState.landmarker) return;
+      if (faceVideo && faceVideo.readyState >= 2) {
+        if (faceCanvas) {
+          faceCanvas.width = faceCanvas.clientWidth;
+          faceCanvas.height = faceCanvas.clientHeight;
+        }
+        const result = faceState.landmarker.detectForVideo(faceVideo, performance.now());
+        if (result.faceBlendshapes?.length > 0) {
+          processFaceBlendshapes(result.faceBlendshapes[0].categories);
+        }
+        if (result.faceLandmarks?.length > 0) {
+          drawFaceMesh(result.faceLandmarks[0]);
+        } else {
+          clearFaceCanvas();
+        }
+        updateFaceFps();
+      }
+      window.requestAnimationFrame(faceLoop);
+    };
+
+    const fetchWithTimeout = async (url, timeout) => {
+      const controller = new AbortController();
+      const timer = window.setTimeout(() => controller.abort(), timeout);
+      try {
+        const response = await fetch(url, { signal: controller.signal });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response;
+      } finally {
+        window.clearTimeout(timer);
+      }
+    };
+
+    const loadFaceModelUrl = async () => {
+      for (const source of FACE_MODEL_SOURCES) {
+        try {
+          const response = await fetchWithTimeout(source.url, source.timeout);
+          const blob = await response.blob();
+          if (faceState.modelUrl) URL.revokeObjectURL(faceState.modelUrl);
+          faceState.modelUrl = URL.createObjectURL(blob);
+          return faceState.modelUrl;
+        } catch (error) {
+          console.warn('模型加载失败', source.url, error);
+        }
+      }
+      throw new Error('模型加载失败');
+    };
+
+    const startFaceRecognition = async () => {
+      if (faceState.running) return;
+      if (!faceStartBtn) return;
+      faceStartBtn.disabled = true;
+      faceStartBtn.textContent = '启动中...';
+      if (facePlaceholder) facePlaceholder.classList.add('hidden');
+      setFaceStatus('Loading', false);
+
+      try {
+        let FaceLandmarker = null;
+        let FilesetResolver = null;
+        for (const url of FACE_JS_URLS) {
+          try {
+            const module = await import(url);
+            FaceLandmarker = module.FaceLandmarker;
+            FilesetResolver = module.FilesetResolver;
+            break;
+          } catch (error) {
+            console.warn('Face JS import failed', url, error);
+          }
+        }
+        if (!FaceLandmarker || !FilesetResolver) {
+          throw new Error('面部识别引擎加载失败');
+        }
+
+        let fs = null;
+        for (const url of FACE_WASM_URLS) {
+          try {
+            fs = await FilesetResolver.forVisionTasks(url);
+            break;
+          } catch (error) {
+            console.warn('WASM load failed', url, error);
+          }
+        }
+        if (!fs) throw new Error('WASM 运行时加载失败');
+
+        const modelUrl = await loadFaceModelUrl();
+        try {
+          faceState.landmarker = await FaceLandmarker.createFromOptions(fs, {
+            baseOptions: { modelAssetPath: modelUrl, delegate: 'GPU' },
+            outputFaceBlendshapes: true,
+            runningMode: 'VIDEO',
+            numFaces: 1,
+          });
+        } catch (error) {
+          faceState.landmarker = await FaceLandmarker.createFromOptions(fs, {
+            baseOptions: { modelAssetPath: modelUrl, delegate: 'CPU' },
+            outputFaceBlendshapes: true,
+            runningMode: 'VIDEO',
+            numFaces: 1,
+          });
+        }
+
+        faceState.stream = await navigator.mediaDevices.getUserMedia({
+          video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' },
+        });
+        if (faceVideo) {
+          faceVideo.srcObject = faceState.stream;
+          await faceVideo.play();
+        }
+
+        faceState.running = true;
+        faceStartBtn.textContent = '停止识别';
+        faceStartBtn.disabled = false;
+        updateFaceToggleUI();
+        faceLoop();
+      } catch (error) {
+        console.error(error);
+        updateFaceStatus();
+        faceStartBtn.textContent = '启动识别';
+        faceStartBtn.disabled = false;
+        if (facePlaceholder) facePlaceholder.classList.remove('hidden');
+        setFooter('面部识别启动失败，请检查网络或摄像头权限', true);
+      }
+    };
+
+    const stopFaceRecognition = () => {
+      faceState.running = false;
+      faceState.actionActive.next = false;
+      faceState.actionActive.prev = false;
+      if (faceState.pendingAction?.timer) {
+        window.clearTimeout(faceState.pendingAction.timer);
+      }
+      faceState.pendingAction = null;
+      clearFaceCanvas();
+      if (faceState.stream) {
+        faceState.stream.getTracks().forEach((track) => track.stop());
+        faceState.stream = null;
+      }
+      if (faceVideo) {
+        faceVideo.srcObject = null;
+      }
+      if (faceStartBtn) {
+        faceStartBtn.textContent = '启动识别';
+        faceStartBtn.disabled = false;
+      }
+      if (facePlaceholder) facePlaceholder.classList.remove('hidden');
+      updateFaceStatus();
+    };
+
+    const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+
+    const getPdfCacheKeyInfo = (pageNumber) => {
+      const { width, height } = getRenderSize();
+      const ratio = Math.max(1, window.devicePixelRatio || 1);
+      return {
+        width,
+        height,
+        ratio,
+        key: `${pageNumber}|${width}|${height}|${state.zoom.toFixed(2)}|${ratio.toFixed(2)}`,
+      };
+    };
+
+    const clampPan = () => {
+      const { width, height } = getRenderSize();
+      const limitX = Math.max(0, ((state.zoom - 1) * width) / 2);
+      const limitY = Math.max(0, ((state.zoom - 1) * height) / 2);
+      state.panX = clamp(state.panX, -limitX, limitX);
+      state.panY = clamp(state.panY, -limitY, limitY);
+    };
+
+    const applyPageTransform = () => {
+      pageImage.style.transform = `translate3d(${state.panX}px, ${state.panY}px, 0) scale(${state.zoom})`;
+      backPageImage.style.transform = `translate3d(0, 0, 0) scale(${state.zoom})`;
+    };
+
+    const schedulePdfZoomRender = () => {
+      if (state.mode !== 'pdf') return;
+
+      window.clearTimeout(state.zoomRerenderTimer);
+      state.zoomRerenderTimer = window.setTimeout(() => {
+        state.zoomRerenderTimer = 0;
+        void renderCurrentPage({ showLoading: false });
+      }, 140);
+    };
+
+    const setZoomLevel = (nextZoom, anchor = null) => {
+      const previousZoom = state.zoom;
+      const clampedZoom = clamp(nextZoom, MIN_ZOOM, MAX_ZOOM);
+
+      if (Math.abs(clampedZoom - previousZoom) < 0.0001) {
+        return;
+      }
+
+      if (anchor) {
+        const rect = stageInner.getBoundingClientRect();
+        const anchorX = anchor.x - rect.left - rect.width / 2;
+        const anchorY = anchor.y - rect.top - rect.height / 2;
+        const scaleRatio = clampedZoom / previousZoom;
+        state.panX = anchorX - (anchorX - state.panX) * scaleRatio;
+        state.panY = anchorY - (anchorY - state.panY) * scaleRatio;
+      }
+
+      state.zoom = clampedZoom;
+      clampPan();
+      applyPageTransform();
+
+      if (state.mode === 'pdf') {
+        schedulePdfZoomRender();
+      }
+
+      setFooter(`缩放：${Math.round(state.zoom * 100)}%`);
+    };
+
+    const resetZoomAndPan = () => {
+      state.centerTapAt = 0;
+      state.panX = 0;
+      state.panY = 0;
+      setZoomLevel(1);
+    };
+
+    const setLoading = (value) => {
+      loadingOverlay.classList.toggle('hidden', !value);
+    };
+
+    const showLoadingDelayed = () => {
+      window.clearTimeout(state.loadingTimer);
+      state.loadingTimer = window.setTimeout(() => {
+        state.loadingTimer = 0;
+        setLoading(true);
+      }, 160);
+    };
+
+    const clearLoadingDelayed = () => {
+      window.clearTimeout(state.loadingTimer);
+      state.loadingTimer = 0;
+      setLoading(false);
+    };
+
+    const setFooter = (text, isError = false) => {
+      footer.textContent = text;
+      footer.classList.toggle('status', true);
+      footer.classList.toggle('error', isError);
+    };
+
+    const hideUI = (value) => {
+      state.uiHidden = value;
+      topbar.classList.toggle('ui-hidden', value);
+      footer.classList.toggle('ui-hidden', value);
+      state.gesture = null;
+      state.pointers.clear();
+      state.pointerEventActive = false;
+      state.mouseFallbackActive = false;
+      state.swipeActive = false;
+      state.swipeDx = 0;
+      state.previewDirection = null;
+    };
+
+    const revokeAllUrls = () => {
+      state.objectUrls.forEach((url) => URL.revokeObjectURL(url));
+      state.objectUrls = [];
+    };
+
+    const clearPdfCache = () => {
+      state.pdfCacheVersion += 1;
+      state.pdfCache.forEach((url) => URL.revokeObjectURL(url));
+      state.pdfCache.clear();
+    };
+
+    const updateTopStatus = () => {
+      const hasContent = state.mode !== 'idle';
+
+      if (!hasContent) {
+        fileName.textContent = '未加载文件';
+        pageDisplay.style.opacity = '0.4';
+        pageDisplay.style.pointerEvents = 'none';
+        if (!pageEditActive) rebuildPageDisplay();
+        fullscreenBtn.textContent = document.fullscreenElement ? '退出全屏' : '全屏';
+        return;
+      }
+
+      fileName.textContent = state.title;
+      pageDisplay.style.opacity = '1';
+      pageDisplay.style.pointerEvents = 'auto';
+      if (!pageEditActive) rebuildPageDisplay();
+
+      fullscreenBtn.textContent = document.fullscreenElement ? '退出全屏' : '全屏';
+    };
+
+    const showEmpty = () => {
+      emptyState.classList.remove('hidden');
+      backPageLayer.classList.add('hidden');
+      backPageImage.classList.add('hidden');
+      pageLayer.classList.add('hidden');
+      pageImage.classList.add('hidden');
+    };
+
+    const showPageLayer = () => {
+      emptyState.classList.add('hidden');
+      backPageLayer.classList.remove('hidden');
+      backPageImage.classList.remove('hidden');
+      pageLayer.classList.remove('hidden');
+      pageImage.classList.remove('hidden');
+    };
+
+    const hideBackPageLayer = () => {
+      backPageLayer.classList.add('hidden');
+      backPageImage.classList.add('hidden');
+      backPageImage.removeAttribute('src');
+    };
+
+    const getRenderSize = () => {
+      const rect = stageInner.getBoundingClientRect();
+      return {
+        width: Math.max(1, Math.floor(rect.width - 8)),
+        height: Math.max(1, Math.floor(rect.height - 8)),
+      };
+    };
+
+    const getPageDisplayRect = () => {
+      const rect = stageInner.getBoundingClientRect();
+      const renderSize = getRenderSize();
+      const width = renderSize.width * state.zoom;
+      const height = renderSize.height * state.zoom;
+      const centerX = rect.left + rect.width / 2 + state.panX;
+      const centerY = rect.top + rect.height / 2 + state.panY;
+      return {
+        left: centerX - width / 2,
+        right: centerX + width / 2,
+        top: centerY - height / 2,
+        bottom: centerY + height / 2,
+        width,
+        height,
+      };
+    };
+
+    const renderPdfPageToUrl = async (pageNumber, cacheInfo = getPdfCacheKeyInfo(pageNumber)) => {
+      if (!state.pdfDoc) return null;
+
+      const version = state.pdfCacheVersion;
+      const cached = state.pdfCache.get(cacheInfo.key);
+      if (cached) return cached;
+
+      if (state.pdfRenderQueue.has(cacheInfo.key)) {
+        return state.pdfRenderQueue.get(cacheInfo.key);
+      }
+
+      const renderTask = (async () => {
+        const page = await state.pdfDoc.getPage(pageNumber);
+        const baseViewport = page.getViewport({ scale: 1 });
+        const fitScale = Math.min(cacheInfo.width / baseViewport.width, cacheInfo.height / baseViewport.height);
+        const renderScale = Math.max(0.2, fitScale * state.zoom * cacheInfo.ratio * PDF_RENDER_QUALITY);
+        const viewport = page.getViewport({ scale: renderScale });
+
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d', { alpha: false });
+        if (!context) return null;
+
+        canvas.width = Math.max(1, Math.floor(viewport.width));
+        canvas.height = Math.max(1, Math.floor(viewport.height));
+
+        await page.render({ canvas, canvasContext: context, viewport }).promise;
+
+        const blob = await new Promise((resolve) => {
+          canvas.toBlob((result) => resolve(result), 'image/jpeg', 0.94);
+        });
+        if (!blob) return null;
+
+        const pageUrl = URL.createObjectURL(blob);
+        if (version !== state.pdfCacheVersion) {
+          URL.revokeObjectURL(pageUrl);
+          return null;
+        }
+
+        state.pdfCache.set(cacheInfo.key, pageUrl);
+        state.objectUrls.push(pageUrl);
+        return pageUrl;
+      })();
+
+      state.pdfRenderQueue.set(cacheInfo.key, renderTask);
+      const result = await renderTask;
+      state.pdfRenderQueue.delete(cacheInfo.key);
+      return result;
+    };
+
+    const primePdfPageCache = (pageNumber) => {
+      if (state.mode !== 'pdf' || !state.pdfDoc) return;
+      if (pageNumber < 1 || pageNumber > state.pageCount) return;
+      const cacheInfo = getPdfCacheKeyInfo(pageNumber);
+      if (state.pdfCache.has(cacheInfo.key) || state.pdfRenderQueue.has(cacheInfo.key)) return;
+      void renderPdfPageToUrl(pageNumber, cacheInfo);
+    };
+
+    const prefetchPdfWindow = async (centerPage) => {
+      if (state.mode !== 'pdf' || !state.pdfDoc) return;
+
+      const keepPages = new Set();
+      for (let offset = -2; offset <= 2; offset += 1) {
+        const pageNumber = centerPage + offset;
+        if (pageNumber >= 1 && pageNumber <= state.pageCount) {
+          keepPages.add(pageNumber);
+        }
+      }
+
+      // 清理主界面超出窗口的缓存，仅保留当前页±2页
+      for (const key of Array.from(state.pdfCache.keys())) {
+        const pageNumber = Number(key.split('|')[0]);
+        if (!keepPages.has(pageNumber)) {
+          const url = state.pdfCache.get(key);
+          if (url) URL.revokeObjectURL(url);
+          state.pdfCache.delete(key);
+        }
+      }
+
+      for (const pageNumber of keepPages) {
+        if (state.mode !== 'pdf' || !state.pdfDoc) return;
+        if (pageNumber === state.currentPage) continue;
+        if (Math.abs(pageNumber - centerPage) === 1) continue;
+        primePdfPageCache(pageNumber);
+      }
+    };
+
+    const renderCurrentPage = async ({ showLoading = true } = {}) => {
+      if (state.mode === 'image') {
+        pageImage.src = state.imagePages[state.currentPage - 1] || '';
+        showPageLayer();
+        clampPan();
+        applyPageTransform();
+        const neighborIndex = state.currentPage < state.pageCount ? state.currentPage : state.currentPage - 2;
+        if (neighborIndex >= 0 && neighborIndex < state.imagePages.length) {
+          backPageImage.src = state.imagePages[neighborIndex];
+        } else {
+          hideBackPageLayer();
+        }
+        setFooter(`第 ${state.currentPage} / ${state.pageCount} 页`);
+        void prefetchPdfWindow(state.currentPage);
+        return;
+      }
+
+      if (state.mode === 'pdf') {
+        const token = ++state.pdfRenderToken;
+        const pageNum = state.currentPage;
+        const cacheInfo = getPdfCacheKeyInfo(pageNum);
+        const cached = state.pdfCache.get(cacheInfo.key);
+
+        if (cached) {
+          showPageLayer();
+          pageImage.src = cached;
+          clampPan();
+          applyPageTransform();
+          const neighborPage = pageNum < state.pageCount ? pageNum + 1 : pageNum - 1;
+          if (neighborPage >= 1 && neighborPage <= state.pageCount) {
+            void renderPdfPageToUrl(neighborPage).then((neighborUrl) => {
+              if (neighborUrl && state.mode === 'pdf') {
+                backPageImage.src = neighborUrl;
+              }
+            });
+          } else {
+            hideBackPageLayer();
+          }
+          setFooter(`第 ${pageNum} / ${state.pageCount} 页`);
+          void prefetchPdfWindow(pageNum);
+          return;
+        }
+
+        if (showLoading) {
+          showLoadingDelayed();
+        }
+
+        try {
+          const url = await renderPdfPageToUrl(pageNum, cacheInfo);
+          if (token !== state.pdfRenderToken) return;
+          if (!url) {
+            // 渲染返回空但 token 仍有效 → 重试一次
+            const retryUrl = await renderPdfPageToUrl(pageNum);
+            if (token !== state.pdfRenderToken) return;
+            if (retryUrl) {
+              showPageLayer();
+              pageImage.src = retryUrl;
+              clampPan();
+              applyPageTransform();
+            } else {
+              setFooter(`第 ${pageNum} 页渲染失败，请重试`, true);
+            }
+            return;
+          }
+          showPageLayer();
+          pageImage.src = url;
+          clampPan();
+          applyPageTransform();
+          const neighborPage = pageNum < state.pageCount ? pageNum + 1 : pageNum - 1;
+          if (neighborPage >= 1 && neighborPage <= state.pageCount) {
+            void renderPdfPageToUrl(neighborPage).then((neighborUrl) => {
+              if (neighborUrl && token === state.pdfRenderToken && state.mode === 'pdf') {
+                backPageImage.src = neighborUrl;
+              }
+            });
+          } else {
+            hideBackPageLayer();
+          }
+          setFooter(`第 ${pageNum} / ${state.pageCount} 页`);
+          void prefetchPdfWindow(pageNum);
+        } catch (error) {
+          console.error(error);
+          if (token === state.pdfRenderToken) {
+            setFooter('PDF 页面渲染失败，请重试', true);
+          }
+        } finally {
+          if (showLoading && token === state.pdfRenderToken) {
+            clearLoadingDelayed();
+          }
+        }
+      }
+    };
+
+    const clearIncomingClasses = () => {
+      pageLayer.classList.remove('incoming-next', 'incoming-prev');
+      pageLayer.style.animationDuration = '';
+    };
+
+    const schedulePageRender = (options = {}) => {
+      window.requestAnimationFrame(() => {
+        void renderCurrentPage(options);
+      });
+    };
+
+    const resetPageLayerMotion = () => {
+      pageLayer.style.transition = '';
+      pageLayer.style.transform = '';
+      pageLayer.style.filter = '';
+      pageImage.style.transition = '';
+      pageImage.style.transform = '';
+      state.swipeActive = false;
+      state.swipeDx = 0;
+    };
+
+    const settleSwipeMotion = () => {
+      pageImage.style.transition = '';
+      state.swipeActive = false;
+      state.swipeDx = 0;
+    };
+
+    const setBackPreviewPage = async (pageNumber) => {
+      if (state.mode === 'idle') return;
+      if (pageNumber < 1 || pageNumber > state.pageCount) {
+        hideBackPageLayer();
+        return;
+      }
+
+      if (state.mode === 'image') {
+        backPageImage.src = state.imagePages[pageNumber - 1] || '';
+        return;
+      }
+
+      if (state.mode === 'pdf') {
+        const token = ++state.backPreviewToken;
+        const url = await renderPdfPageToUrl(pageNumber);
+        if (token === state.backPreviewToken && url) {
+          backPageImage.src = url;
+        }
+      }
+    };
+
+    const setSwipePreview = (dx) => {
+      if (state.mode === 'idle' || state.zoom > 1.01 || state.isAnimating) return;
+
+      state.swipeActive = true;
+      state.swipeDx = dx;
+      clearIncomingClasses();
+      const direction = dx < 0 ? 'next' : 'prev';
+      if (state.previewDirection !== direction) {
+        state.previewDirection = direction;
+        void setBackPreviewPage(direction === 'next' ? state.currentPage + 1 : state.currentPage - 1);
+      }
+      pageImage.style.transition = 'none';
+      pageImage.style.transform = `translate3d(${state.panX + dx}px, ${state.panY}px, 0) scale(${state.zoom})`;
+    };
+
+    const animateSwipeBack = () => {
+      if (!state.swipeActive) return;
+
+      const fromX = state.panX + state.swipeDx;
+      pageImage.style.transition = 'none';
+      const animation = pageImage.animate(
+        [
+          { transform: `translate3d(${fromX}px, ${state.panY}px, 0) scale(${state.zoom})` },
+          { transform: `translate3d(${state.panX}px, ${state.panY}px, 0) scale(${state.zoom})` },
+        ],
+        { duration: 120, easing: 'linear' },
+      );
+      animation.onfinish = () => {
+        animation.cancel();
+        applyPageTransform();
+        state.previewDirection = null;
+        settleSwipeMotion();
+      };
+    };
+
+    const animatePageOut = (direction, startOffsetX) => {
+      const width = Math.max(1, Math.floor(stageInner.getBoundingClientRect().width));
+      const targetX = direction === 'next' ? -width : width;
+      const distance = Math.max(0, Math.abs(targetX - startOffsetX));
+      const duration = clamp(Math.round((distance / width) * 120), 50, 120);
+      const fromTransform = `translate3d(${startOffsetX}px, ${state.panY}px, 0) scale(${state.zoom})`;
+      const toTransform = `translate3d(${targetX}px, ${state.panY}px, 0) scale(${state.zoom})`;
+
+      pageImage.style.transition = 'none';
+      pageImage.style.transform = fromTransform;
+      const animation = pageImage.animate(
+        [{ transform: fromTransform, opacity: 1 }, { transform: toTransform, opacity: 0.98 }],
+        { duration, easing: 'linear', fill: 'forwards' },
+      );
+
+      return new Promise((resolve) => {
+        animation.onfinish = () => {
+          pageImage.style.transform = toTransform;
+          animation.cancel();
+          resolve(duration);
+        };
+      });
+    };
+
+    const animateFlip = (direction, startOffsetX = 0) => {
+      if (!pageImage.src) return;
+
+      flipOverlay.innerHTML = '';
+      const shot = document.createElement('img');
+      shot.src = pageImage.src;
+      shot.alt = '翻页过渡';
+      flipOverlay.appendChild(shot);
+
+      const width = Math.max(1, Math.floor(stageInner.getBoundingClientRect().width));
+      const targetX = direction === 'next' ? -width : width;
+      const distance = Math.max(0, Math.abs(targetX - startOffsetX));
+      const duration = clamp(Math.round((distance / width) * 120), 50, 120);
+
+      flipOverlay.classList.remove('hidden', 'flip-next', 'flip-prev');
+      shot.style.transform = `translate3d(${startOffsetX}px, 0, 0)`;
+
+      shot.animate(
+        [
+          { transform: `translate3d(${startOffsetX}px, 0, 0)`, opacity: 1 },
+          { transform: `translate3d(${targetX}px, 0, 0)`, opacity: 0 },
+        ],
+        { duration, easing: 'linear', fill: 'forwards' },
+      );
+
+      window.setTimeout(() => {
+        flipOverlay.classList.add('hidden');
+        flipOverlay.classList.remove('flip-next', 'flip-prev');
+        flipOverlay.innerHTML = '';
+      }, duration + 24);
+      return duration;
+    };
+
+    const goToPage = async (targetPage, direction, startOffsetX = 0) => {
+      if (state.mode === 'idle' || state.isAnimating) return;
+      const nextPage = clamp(targetPage, 1, state.pageCount);
+      if (nextPage === state.currentPage) return;
+
+      primePdfPageCache(nextPage);
+
+      state.isAnimating = true;
+      state.previewDirection = direction;
+      void setBackPreviewPage(nextPage);
+      const animationMs = await animatePageOut(direction, startOffsetX);
+      state.currentPage = nextPage;
+      state.panX = 0;
+      state.panY = 0;
+      state.centerTapAt = 0;
+      state.previewDirection = null;
+      settleSwipeMotion();
+      updateTopStatus();
+      schedulePageRender();
+      saveSessionState();
+
+      window.setTimeout(() => {
+        state.isAnimating = false;
+        updateTopStatus();
+      }, animationMs + 24);
+    };
+
+    const goToPageInstant = async (targetPage) => {
+      if (state.mode === 'idle' || state.isAnimating) return;
+      const nextPage = clamp(targetPage, 1, state.pageCount);
+      if (nextPage === state.currentPage) return;
+
+      primePdfPageCache(nextPage);
+
+      state.isAnimating = true;
+      state.currentPage = nextPage;
+      state.panX = 0;
+      state.panY = 0;
+      state.centerTapAt = 0;
+      state.previewDirection = null;
+      settleSwipeMotion();
+      updateTopStatus();
+      schedulePageRender();
+      saveSessionState();
+
+      window.requestAnimationFrame(() => {
+        state.isAnimating = false;
+        updateTopStatus();
+      });
+    };
+
+    const nextPage = () => goToPage(state.currentPage + 1, 'next');
+    const prevPage = () => goToPage(state.currentPage - 1, 'prev');
+
+    const jumpToPage = (requestedPage) => {
+      if (state.mode === 'idle') return;
+      const requested = Math.max(1, Math.min(state.pageCount, requestedPage || 1));
+      if (requested === state.currentPage) return;
+      void goToPage(requested, requested > state.currentPage ? 'next' : 'prev');
+    };
+
+    // 点击页码显示区域进入编辑模式
+    let pageEditActive = false;
+    const startPageEdit = () => {
+      if (state.mode === 'idle' || pageEditActive) return;
+      pageEditActive = true;
+      pageDisplay.classList.add('editing');
+      const input = document.createElement('input');
+      input.type = 'number';
+      input.className = 'page-input-edit';
+      input.min = '1';
+      input.max = String(state.pageCount);
+      input.value = String(state.currentPage);
+      input.setAttribute('aria-label', '输入页码');
+      pageDisplay.innerHTML = '';
+      pageDisplay.appendChild(input);
+      input.focus();
+      input.select();
+
+      const commitEdit = () => {
+        if (!pageEditActive) return;
+        pageEditActive = false;
+        pageDisplay.classList.remove('editing');
+        const val = parseInt(input.value, 10);
+        // 恢复显示模式
+        rebuildPageDisplay();
+        if (!isNaN(val) && val >= 1 && val <= state.pageCount) {
+          jumpToPage(val);
+        }
+      };
+
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          commitEdit();
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          pageEditActive = false;
+          pageDisplay.classList.remove('editing');
+          rebuildPageDisplay();
+        }
+      });
+      input.addEventListener('blur', commitEdit);
+    };
+
+    const rebuildPageDisplay = () => {
+      pageDisplay.innerHTML = '';
+      const curSpan = document.createElement('span');
+      curSpan.id = 'pageCurDisplay';
+      curSpan.className = 'page-cur';
+      curSpan.textContent = String(state.currentPage);
+      const sepSpan = document.createElement('span');
+      sepSpan.className = 'page-sep';
+      sepSpan.textContent = '/';
+      const totalSpan = document.createElement('span');
+      totalSpan.id = 'pageTotalDisplay';
+      totalSpan.className = 'page-total';
+      totalSpan.textContent = String(state.pageCount);
+      pageDisplay.appendChild(curSpan);
+      pageDisplay.appendChild(sepSpan);
+      pageDisplay.appendChild(totalSpan);
+      // 更新引用
+      window._pageCurDisplay = curSpan;
+      window._pageTotalDisplay = totalSpan;
+    };
+
+    const resetViewer = async () => {
+      state.pdfRenderToken++;
+      window.clearTimeout(state.zoomRerenderTimer);
+      state.zoomRerenderTimer = 0;
+      window.clearTimeout(state.loadingTimer);
+      state.loadingTimer = 0;
+      state.centerTapAt = 0;
+
+      if (state.pdfDoc) {
+        await state.pdfDoc.destroy();
+      }
+
+      clearPdfCache();
+      revokeAllUrls();
+      closeThumbnailPanel();
+      state.thumbnailCache.clear();
+      state.pdfRenderQueue.clear();
+
+      state.mode = 'idle';
+      state.imagePages = [];
+      state.pdfDoc = null;
+      state.title = '';
+      state.currentPage = 1;
+      state.pageCount = 0;
+      state.zoom = 1;
+      state.panX = 0;
+      state.panY = 0;
+      state.gesture = null;
+      state.pointers.clear();
+      state.isAnimating = false;
+      state.previewDirection = null;
+      state.backPreviewToken = 0;
+      resetPageLayerMotion();
+
+      pageImage.removeAttribute('src');
+      applyPageTransform();
+      pageLayer.classList.add('hidden');
+      flipOverlay.classList.add('hidden');
+      flipOverlay.innerHTML = '';
+      showEmpty();
+      fileInput.value = '';
+      hideUI(false);
+      setLoading(false);
+      setFooter('等待上传文件');
+      updateTopStatus();
+    };
+
+    const setImageSong = async (files) => {
+      await resetViewer();
+
+      const sorted = files
+        .slice()
+        .sort((a, b) => a.name.localeCompare(b.name, 'zh-CN', { numeric: true }));
+
+      state.imagePages = sorted.map((file) => {
+        const url = URL.createObjectURL(file);
+        state.objectUrls.push(url);
+        return url;
+      });
+
+      state.mode = 'image';
+      state.currentPage = 1;
+      state.pageCount = state.imagePages.length;
+      state.title = state.pageCount > 1 ? `多图曲谱（${state.pageCount} 页）` : sorted[0].name;
+      state.zoom = 1;
+      state.panX = 0;
+      state.panY = 0;
+
+      showPageLayer();
+      await renderCurrentPage();
+      updateTopStatus();
+      setFooter(`已加载图片曲谱，共 ${state.pageCount} 页`);
+
+      // 持久化：保存图片文件到 IndexedDB
+      try {
+        const buffers = await Promise.all(sorted.map((f) => f.arrayBuffer()));
+        await idbPut('currentFiles', buffers);
+        await idbDelete('currentFile');
+        saveSessionState();
+      } catch (e) {
+        console.warn('保存图片到 IndexedDB 失败', e);
+      }
+    };
+
+    const setPdfSong = async (file) => {
+      await resetViewer();
+
+      const buffer = await file.arrayBuffer();
+      const loadingTask = pdfjsLib.getDocument({ data: buffer });
+      const pdf = await loadingTask.promise;
+
+      state.mode = 'pdf';
+      state.pdfDoc = pdf;
+      state.currentPage = 1;
+      state.pageCount = pdf.numPages;
+      state.title = file.name;
+      state.zoom = 1;
+      state.panX = 0;
+      state.panY = 0;
+
+      showPageLayer();
+      await renderCurrentPage();
+      updateTopStatus();
+      setFooter(`PDF 已加载，共 ${state.pageCount} 页`);
+
+      // 持久化：保存 PDF 文件到 IndexedDB
+      try {
+        await idbPut('currentFile', buffer);
+        await idbDelete('currentFiles');
+        saveSessionState();
+      } catch (e) {
+        console.warn('保存 PDF 到 IndexedDB 失败', e);
+      }
+    };
+
+    const loadFiles = async (rawFiles) => {
+      const files = Array.from(rawFiles || []);
+      if (!files.length) return;
+
+      setLoading(true);
+      setFooter('正在读取文件...');
+
+      const images = files.filter((file) => file.type.startsWith('image/'));
+      const pdfs = files.filter((file) => file.type === 'application/pdf');
+
+      try {
+        if (pdfs.length > 1) {
+          throw new Error('一次仅支持导入 1 个 PDF 文件');
+        }
+
+        if (pdfs.length === 1 && images.length > 0) {
+          throw new Error('请分开导入：图片组和 PDF 不能混合导入');
+        }
+
+        if (images.length === files.length) {
+          await setImageSong(images);
+          return;
+        }
+
+        if (pdfs.length === 1 && files.length === 1) {
+          await setPdfSong(pdfs[0]);
+          return;
+        }
+
+        throw new Error('仅支持图片组或单个 PDF 文件');
+      } catch (error) {
+        const message = error instanceof Error ? error.message : '读取失败';
+        setFooter(message, true);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const handleDrop = (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      shell.classList.remove('dragover');
+      state.dragOver = false;
+      void loadFiles(event.dataTransfer.files);
+    };
+
+    const handleTapZone = (xRatio, pointerType = 'mouse') => {
+      if (state.zoom > 1.01) {
+        if (xRatio > 0.3 && xRatio < 0.7) {
+          const now = performance.now();
+          const windowMs = pointerType === 'mouse' ? 360 : 500;
+          if (now - state.centerTapAt < windowMs) {
+            resetZoomAndPan();
+            return;
+          }
+
+          state.centerTapAt = now;
+        }
+        return;
+      }
+
+      if (xRatio <= 0.3) {
+        void prevPage();
+        return;
+      }
+      if (xRatio >= 0.7) {
+        void nextPage();
+        return;
+      }
+      // 单击中间区域隐藏/显示 UI
+      hideUI(!state.uiHidden);
+    };
+
+    const onDoubleClick = (event) => {
+      if (state.mode === 'idle' || state.zoom <= 1.01) return;
+
+      const rect = stageInner.getBoundingClientRect();
+      const xRatio = (event.clientX - rect.left) / rect.width;
+      if (xRatio > 0.3 && xRatio < 0.7) {
+        event.preventDefault();
+        resetZoomAndPan();
+      }
+    };
+
+    const updatePointer = (event) => {
+      state.pointers.set(event.pointerId, {
+        x: event.clientX,
+        y: event.clientY,
+      });
+    };
+
+    const getPointerPair = () => {
+      const points = Array.from(state.pointers.values());
+      if (points.length < 2) return null;
+      return [points[0], points[1]];
+    };
+
+    const isInteractiveTarget = (target) => {
+      if (!(target instanceof Element)) return false;
+      return Boolean(target.closest('button, input, select, textarea, label, a, .page-display, .thumbnail-panel, .thumbnail-shade, .thumbnail-close'));
+    };
+
+    const onPointerDown = (event) => {
+      if (event.button !== 0 && event.pointerType === 'mouse') return;
+      if (isInteractiveTarget(event.target)) return;
+      if (state.thumbnailPanelOpen && (thumbnailPanel.contains(event.target) || thumbnailShade.contains(event.target))) {
+        return;
+      }
+
+      if (event.cancelable && event.preventDefault) {
+        event.preventDefault();
+      }
+
+      state.pointerEventActive = true;
+      updatePointer(event);
+
+      if (state.pointers.size === 1) {
+        state.gesture = {
+          mode: state.zoom > 1.01 ? 'pan' : 'tap',
+          pointerId: event.pointerId,
+          startX: event.clientX,
+          startY: event.clientY,
+          x: event.clientX,
+          y: event.clientY,
+          t: performance.now(),
+          startPanX: state.panX,
+          startPanY: state.panY,
+          fromStage: stageInner.contains(event.target),
+          moved: false,
+        };
+        return;
+      }
+
+      if (state.pointers.size === 2) {
+        const pair = getPointerPair();
+        if (!pair) return;
+
+        const [first, second] = pair;
+        const dx = second.x - first.x;
+        const dy = second.y - first.y;
+
+        state.gesture = {
+          mode: 'pinch',
+          startZoom: state.zoom,
+          startPanX: state.panX,
+          startPanY: state.panY,
+          startDistance: Math.max(12, Math.hypot(dx, dy)),
+          startCenterX: (first.x + second.x) / 2,
+          startCenterY: (first.y + second.y) / 2,
+        };
+      }
+    };
+
+    const onPointerMove = (event) => {
+      if (!state.pointers.has(event.pointerId)) return;
+
+      if (event.cancelable && event.preventDefault) {
+        event.preventDefault();
+      }
+
+      updatePointer(event);
+
+      if (!state.gesture) return;
+
+      if (state.gesture.mode === 'pan') {
+        const current = state.pointers.get(state.gesture.pointerId);
+        if (!current) return;
+
+        state.panX = state.gesture.startPanX + (current.x - state.gesture.startX);
+        state.panY = state.gesture.startPanY + (current.y - state.gesture.startY);
+        clampPan();
+        applyPageTransform();
+        const movedX = Math.abs(current.x - state.gesture.startX);
+        const movedY = Math.abs(current.y - state.gesture.startY);
+        if (movedX > 8 || movedY > 8) {
+          state.gesture.moved = true;
+        }
+        return;
+      }
+
+      if (state.gesture.mode === 'pinch') {
+        const pair = getPointerPair();
+        if (!pair) return;
+
+        const [first, second] = pair;
+        const dx = second.x - first.x;
+        const dy = second.y - first.y;
+        const distance = Math.max(12, Math.hypot(dx, dy));
+        const centerX = (first.x + second.x) / 2;
+        const centerY = (first.y + second.y) / 2;
+        const nextZoom = state.gesture.startZoom * (distance / state.gesture.startDistance);
+
+        state.panX = state.gesture.startPanX;
+        state.panY = state.gesture.startPanY;
+        setZoomLevel(nextZoom, { x: centerX, y: centerY });
+        return;
+      }
+
+      if (state.gesture.mode === 'tap' && state.zoom <= 1.01) {
+        const current = state.pointers.get(state.gesture.pointerId);
+        if (!current) return;
+
+        const dx = current.x - state.gesture.startX;
+        const dy = current.y - state.gesture.startY;
+        const absX = Math.abs(dx);
+        const absY = Math.abs(dy);
+
+        // 降低滑动预览触发阈值，使滑动反馈更灵敏
+        if (absX > 6 && absX > absY * 1.1) {
+          state.gesture.moved = true;
+          setSwipePreview(dx);
+        }
+      }
+    };
+
+    const onPointerUp = (event) => {
+      if (!state.pointers.has(event.pointerId)) return;
+
+      if (event.pointerType !== 'mouse' && event.preventDefault) {
+        event.preventDefault();
+      }
+
+      const finalizePointerState = () => {
+        if (state.pointers.size === 0) {
+          state.pointerEventActive = false;
+        }
+      };
+
+      const currentGesture = state.gesture;
+      state.pointers.delete(event.pointerId);
+
+      if (state.pointers.size === 0) {
+        state.gesture = null;
+      } else if (state.gesture?.mode === 'pinch' && state.pointers.size === 1) {
+        const remaining = Array.from(state.pointers.entries())[0];
+        if (remaining) {
+          state.gesture = {
+            mode: state.zoom > 1.01 ? 'pan' : 'tap',
+            pointerId: remaining[0],
+            startX: remaining[1].x,
+            startY: remaining[1].y,
+            x: remaining[1].x,
+            y: remaining[1].y,
+            t: performance.now(),
+            startPanX: state.panX,
+            startPanY: state.panY,
+            moved: false,
+          };
+        }
+      }
+
+      if (!currentGesture) {
+        if (state.swipeActive) {
+          animateSwipeBack();
+        }
+        finalizePointerState();
+        return;
+      }
+
+      if (currentGesture.mode === 'pinch') {
+        finalizePointerState();
+        return;
+      }
+
+      if (currentGesture.mode === 'pan' && currentGesture.moved) {
+        finalizePointerState();
+        return;
+      }
+
+      const start = currentGesture;
+
+      const dx = event.clientX - start.x;
+      const dy = event.clientY - start.y;
+      const absX = Math.abs(dx);
+      const absY = Math.abs(dy);
+      const dt = performance.now() - start.t;
+      const isTouchLike = event.pointerType !== 'mouse';
+      const tapDistance = isTouchLike ? 20 : 14;
+      const tapDuration = isTouchLike ? 380 : 260;
+
+      // 降低滑动阈值：18px 起步即可触发，水平/垂直比 1.15
+      if (absX > 18 && absX > absY * 1.15) {
+        const threshold = Math.max(18, Math.floor(stageInner.getBoundingClientRect().width * 0.08));
+
+        if (state.swipeActive) {
+          if (absX >= threshold) {
+            const targetPage = dx < 0 ? state.currentPage + 1 : state.currentPage - 1;
+            if (targetPage < 1 || targetPage > state.pageCount || targetPage === state.currentPage) {
+              animateSwipeBack();
+            } else if (dx < 0) {
+              void goToPage(targetPage, 'next', state.swipeDx);
+            } else {
+              void goToPage(targetPage, 'prev', state.swipeDx);
+            }
+          } else {
+            animateSwipeBack();
+          }
+          finalizePointerState();
+          return;
+        }
+
+        if (dx < 0) {
+          void nextPage();
+        } else {
+          void prevPage();
+        }
+        finalizePointerState();
+        return;
+      }
+
+      if (dt < tapDuration && absX < tapDistance && absY < tapDistance) {
+        if (!start.fromStage) {
+          finalizePointerState();
+          return;
+        }
+        const pageRect = getPageDisplayRect();
+        if (
+          event.clientX < pageRect.left ||
+          event.clientX > pageRect.right ||
+          event.clientY < pageRect.top ||
+          event.clientY > pageRect.bottom
+        ) {
+          finalizePointerState();
+          return;
+        }
+        const xRatio = (event.clientX - pageRect.left) / pageRect.width;
+        handleTapZone(xRatio, event.pointerType);
+      } else if (state.swipeActive) {
+        animateSwipeBack();
+      }
+
+      finalizePointerState();
+    };
+
+    const toMousePointerEvent = (event) => ({
+      pointerId: -1,
+      pointerType: 'mouse',
+      button: event.button ?? 0,
+      clientX: event.clientX,
+      clientY: event.clientY,
+    });
+
+    const onMouseDown = (event) => {
+      if (state.pointerEventActive || event.button !== 0) return;
+      state.mouseFallbackActive = true;
+      onPointerDown(toMousePointerEvent(event));
+    };
+
+    const onMouseMove = (event) => {
+      if (!state.mouseFallbackActive || state.pointerEventActive) return;
+      onPointerMove(toMousePointerEvent(event));
+    };
+
+    const finishMouseFallback = (event) => {
+      if (!state.mouseFallbackActive || state.pointerEventActive) return;
+      onPointerUp(toMousePointerEvent(event));
+      state.mouseFallbackActive = false;
+    };
+
+    const onWheel = (event) => {
+      if (state.mode === 'idle' || state.thumbnailPanelOpen) return;
+
+      event.preventDefault();
+      const delta = event.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP;
+      setZoomLevel(state.zoom + delta, { x: event.clientX, y: event.clientY });
+    };
+
+    const toggleFullscreen = async () => {
+      if (!document.fullscreenElement) {
+        await shell.requestFullscreen();
+      } else {
+        await document.exitFullscreen();
+      }
+      updateTopStatus();
+      if (state.mode === 'pdf') {
+        schedulePageRender({ showLoading: false });
+      }
+    };
+
+    const onResize = () => {
+      if (state.mode === 'pdf') {
+        schedulePageRender({ showLoading: false });
+      }
+    };
+
+    const renderThumbnailPage = async (pageNumber) => {
+      const cacheKey = `thumb|${pageNumber}`;
+      if (state.thumbnailCache.has(cacheKey)) {
+        return state.thumbnailCache.get(cacheKey);
+      }
+
+      let url = null;
+      if (state.mode === 'image') {
+        const sourceUrl = state.imagePages[pageNumber - 1];
+        if (sourceUrl) {
+          try {
+            if ('createImageBitmap' in window) {
+              const blob = await (await fetch(sourceUrl)).blob();
+              const bitmap = await createImageBitmap(blob, { resizeWidth: 100, resizeHeight: 140, resizeQuality: 'low' });
+              const canvas = document.createElement('canvas');
+              canvas.width = bitmap.width;
+              canvas.height = bitmap.height;
+              const ctx = canvas.getContext('2d', { alpha: false });
+              if (ctx) {
+                ctx.drawImage(bitmap, 0, 0);
+                url = canvas.toDataURL('image/jpeg', 0.7);
+              }
+              bitmap.close();
+            } else {
+              const img = new Image();
+              img.decoding = 'async';
+              img.src = sourceUrl;
+              await new Promise((resolve, reject) => {
+                img.onload = () => resolve();
+                img.onerror = () => reject();
+              });
+              const scale = Math.min(100 / img.width, 140 / img.height, 1);
+              const canvas = document.createElement('canvas');
+              canvas.width = Math.max(1, Math.round(img.width * scale));
+              canvas.height = Math.max(1, Math.round(img.height * scale));
+              const ctx = canvas.getContext('2d', { alpha: false });
+              if (ctx) {
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                url = canvas.toDataURL('image/jpeg', 0.7);
+              }
+            }
+          } catch (error) {
+            url = sourceUrl;
+          }
+        }
+      } else if (state.mode === 'pdf' && state.pdfDoc) {
+        const page = await state.pdfDoc.getPage(pageNumber);
+        const viewport = page.getViewport({ scale: 1 });
+        const thumbScale = Math.min(90 / viewport.width, 120 / viewport.height);
+        const thumbViewport = page.getViewport({ scale: thumbScale });
+
+        const canvas = document.createElement('canvas');
+        canvas.width = thumbViewport.width;
+        canvas.height = thumbViewport.height;
+        const ctx = canvas.getContext('2d', { alpha: false });
+        if (ctx) {
+          await page.render({ canvasContext: ctx, canvas, viewport: thumbViewport }).promise;
+          url = canvas.toDataURL('image/jpeg', 0.72);
+        }
+      }
+
+      if (url) {
+        state.thumbnailCache.set(cacheKey, url);
+      }
+      return url;
+    };
+
+    let thumbnailObserver = null;
+    let thumbnailSentinel = null;
+    let thumbnailSentinelObserver = null;
+
+    const buildThumbnailItem = (i, renderToken) => {
+      const item = document.createElement('div');
+      item.className = `thumbnail-item ${i === state.currentPage ? 'current' : ''}`;
+      item.addEventListener('click', () => {
+        if (i !== state.currentPage) {
+          void goToPageInstant(i);
+        }
+        closeThumbnailPanel();
+      });
+      item.dataset.page = String(i);
+
+      const img = document.createElement('img');
+      img.className = 'thumbnail-thumb';
+      img.alt = `第 ${i} 页`;
+      img.style.opacity = '0.55';
+
+      const label = document.createElement('div');
+      label.className = 'thumbnail-page';
+      label.textContent = `第 ${i} 页`;
+
+      item.appendChild(img);
+      item.appendChild(label);
+
+      // 使用 IntersectionObserver 懒加载缩略图图像
+      if (thumbnailObserver) {
+        thumbnailObserver.observe(item);
+      }
+      return item;
+    };
+
+    const BATCH_SIZE = 10;
+    let currentBatchEnd = 0;
+
+    const addNextBatch = (renderToken) => {
+      const start = currentBatchEnd + 1;
+      const end = Math.min(start + BATCH_SIZE - 1, state.pageCount);
+      if (start > state.pageCount || renderToken !== state.thumbnailRenderToken) return;
+
+      const fragment = document.createDocumentFragment();
+      for (let i = start; i <= end; i++) {
+        fragment.appendChild(buildThumbnailItem(i, renderToken));
+      }
+
+      // 移除哨兵（如果有），添加新项目，再添加哨兵
+      if (thumbnailSentinel && thumbnailSentinel.parentNode) {
+        thumbnailGrid.insertBefore(fragment, thumbnailSentinel);
+      } else {
+        thumbnailGrid.appendChild(fragment);
+      }
+
+      currentBatchEnd = end;
+
+      // 如果还有更多页面，添加哨兵元素
+      if (currentBatchEnd < state.pageCount) {
+        if (!thumbnailSentinel) {
+          thumbnailSentinel = document.createElement('div');
+          thumbnailSentinel.style.height = '1px';
+          thumbnailSentinel.style.width = '100%';
+        }
+        thumbnailGrid.appendChild(thumbnailSentinel);
+        if (thumbnailSentinelObserver) {
+          thumbnailSentinelObserver.observe(thumbnailSentinel);
+        }
+      } else if (thumbnailSentinelObserver) {
+        thumbnailSentinelObserver.disconnect();
+      }
+    };
+
+    const buildThumbnailGrid = async () => {
+      if (state.mode === 'idle') return;
+
+      thumbnailGrid.innerHTML = '';
+      currentBatchEnd = 0;
+      const renderToken = ++state.thumbnailRenderToken;
+
+      // 断开旧的观察者
+      if (thumbnailObserver) {
+        thumbnailObserver.disconnect();
+      }
+      if (thumbnailSentinelObserver) {
+        thumbnailSentinelObserver.disconnect();
+      }
+
+      // 缩略图图像懒加载观察器
+      thumbnailObserver = new IntersectionObserver(
+        (entries) => {
+          for (const entry of entries) {
+            if (!entry.isIntersecting) continue;
+            const item = entry.target;
+            const pageNumber = Number(item.dataset.page || 0);
+            if (!pageNumber || item.dataset.loaded === '1') continue;
+            item.dataset.loaded = '1';
+            const img = item.querySelector('img');
+            if (img) {
+              void renderThumbnailPage(pageNumber).then((url) => {
+                if (renderToken !== state.thumbnailRenderToken) return;
+                if (url) {
+                  img.src = url;
+                  img.style.opacity = '1';
+                }
+              });
+            }
+            thumbnailObserver.unobserve(item);
+          }
+        },
+        { root: thumbnailGrid, rootMargin: '120px 0px', threshold: 0.01 },
+      );
+
+      // 列数：根据容器宽度自适应
+      let colCount = 1;
+      const panelWidth = thumbnailGrid.clientWidth || 300;
+      if (panelWidth > 200) colCount = 2;
+      if (panelWidth > 340) colCount = 3;
+
+      thumbnailGrid.style.gridTemplateColumns = `repeat(${colCount}, minmax(0, 1fr))`;
+
+      // 先创建哨兵观察器，再渲染第一批（addNextBatch 内部需要它来观察哨兵）
+      thumbnailSentinelObserver = new IntersectionObserver(
+        (entries) => {
+          for (const entry of entries) {
+            if (entry.isIntersecting && renderToken === state.thumbnailRenderToken) {
+              addNextBatch(renderToken);
+            }
+          }
+        },
+        { root: thumbnailGrid, rootMargin: '200px 0px', threshold: 0.01 },
+      );
+
+      // 渲染第一批
+      addNextBatch(renderToken);
+    };
+
+    const openThumbnailPanel = async () => {
+      if (state.mode === 'idle') return;
+      state.thumbnailPanelOpen = true;
+      thumbnailShade.classList.remove('hidden');
+      thumbnailPanel.classList.remove('hidden');
+      thumbnailShade.setAttribute('aria-hidden', 'false');
+      thumbnailPanel.setAttribute('aria-hidden', 'false');
+      thumbnailShade.classList.add('open');
+      thumbnailPanel.classList.add('open');
+      window.requestAnimationFrame(() => {
+        void buildThumbnailGrid();
+      });
+    };
+
+    const closeThumbnailPanel = () => {
+      state.thumbnailPanelOpen = false;
+      state.thumbnailRenderToken += 1;
+      if (thumbnailObserver) {
+        thumbnailObserver.disconnect();
+      }
+      if (thumbnailSentinelObserver) {
+        thumbnailSentinelObserver.disconnect();
+      }
+      currentBatchEnd = 0;
+      thumbnailShade.classList.remove('open');
+      thumbnailPanel.classList.remove('open');
+      thumbnailShade.setAttribute('aria-hidden', 'true');
+      thumbnailPanel.setAttribute('aria-hidden', 'true');
+      window.setTimeout(() => {
+        if (!state.thumbnailPanelOpen) {
+          thumbnailShade.classList.add('hidden');
+          thumbnailPanel.classList.add('hidden');
+          thumbnailGrid.innerHTML = '';
+        }
+      }, 240);
+    };
+
+    fileInput.addEventListener('change', (event) => {
+      void loadFiles(event.target.files);
+      fileInput.value = '';
+    });
+
+    pageDisplay.addEventListener('click', () => {
+      startPageEdit();
+    });
+
+    // 在 document 级别拦截 dragover/drop，防止 Edge 在拖放到页面非 shell 区域时打开新窗口
+    document.addEventListener('dragover', (event) => {
+      event.preventDefault();
+      event.dataTransfer.dropEffect = 'copy';
+    });
+    document.addEventListener('drop', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      // 只有当 drop 不在 shell 内部时，才在此处理（shell 自己会处理内部 drop）
+      if (!shell.contains(event.target) && event.dataTransfer?.files?.length) {
+        void loadFiles(event.dataTransfer.files);
+      }
+    });
+
+    shell.addEventListener('dragenter', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (!state.dragOver) {
+        shell.classList.add('dragover');
+        state.dragOver = true;
+      }
+    });
+
+    shell.addEventListener('dragover', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      event.dataTransfer.dropEffect = 'copy';
+      if (!state.dragOver) {
+        shell.classList.add('dragover');
+        state.dragOver = true;
+      }
+    });
+
+    shell.addEventListener('dragleave', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (event.target === shell || event.target === stageInner) {
+        shell.classList.remove('dragover');
+        state.dragOver = false;
+      }
+    });
+
+    shell.addEventListener('drop', handleDrop);
+
+    // pointermove 在 stageInner 上监听，在下面添加
+    stageInner.addEventListener('pointerdown', onPointerDown);
+    shell.addEventListener('pointerdown', (event) => {
+      if (stageInner.contains(event.target)) return;
+      onPointerDown(event);
+    });
+    stageInner.addEventListener('pointerup', onPointerUp);
+    stageInner.addEventListener('pointercancel', onPointerUp);
+    stageInner.addEventListener('mousedown', onMouseDown);
+    stageInner.addEventListener('mousemove', onMouseMove);
+    stageInner.addEventListener('mouseup', finishMouseFallback);
+    stageInner.addEventListener('mouseleave', finishMouseFallback);
+    stageInner.addEventListener('dblclick', onDoubleClick);
+
+    leftEdge.addEventListener('click', () => {
+      void prevPage();
+    });
+
+    rightEdge.addEventListener('click', () => {
+      void nextPage();
+    });
+
+    loadFacePrefs();
+    buildFaceBlendshapePanel();
+    buildFaceThresholdPanel();
+    updateFaceToggleUI();
+    updateFaceModeUI();
+
+    faceBtn.addEventListener('click', () => {
+      faceOverlay.classList.remove('hidden');
+      faceOverlay.setAttribute('aria-hidden', 'false');
+    });
+
+    faceClose.addEventListener('click', () => {
+      faceOverlay.classList.add('hidden');
+      faceOverlay.setAttribute('aria-hidden', 'true');
+    });
+
+    faceOverlay.addEventListener('click', (event) => {
+      if (event.target === faceOverlay) {
+        faceOverlay.classList.add('hidden');
+        faceOverlay.setAttribute('aria-hidden', 'true');
+      }
+    });
+
+    faceStartBtn.addEventListener('click', () => {
+      if (faceState.running) {
+        stopFaceRecognition();
+      } else {
+        void startFaceRecognition();
+      }
+    });
+
+    faceEnableBtn.addEventListener('click', () => {
+      faceState.enabled = !faceState.enabled;
+      updateFaceToggleUI();
+      saveFacePrefs();
+    });
+
+    faceMeshBtn.addEventListener('click', () => {
+      faceState.showMesh = !faceState.showMesh;
+      updateFaceToggleUI();
+      if (!faceState.showMesh) {
+        clearFaceCanvas();
+      }
+      saveFacePrefs();
+    });
+
+    faceModeWink.addEventListener('click', () => {
+      faceState.triggerMode = 'wink';
+      updateFaceModeUI();
+      saveFacePrefs();
+    });
+
+    faceModePucker.addEventListener('click', () => {
+      faceState.triggerMode = 'pucker';
+      updateFaceModeUI();
+      saveFacePrefs();
+    });
+
+    faceModeBoth.addEventListener('click', () => {
+      faceState.triggerMode = 'both';
+      updateFaceModeUI();
+      saveFacePrefs();
+    });
+
+    fullscreenBtn.addEventListener('click', () => {
+      void toggleFullscreen();
+    });
+
+    thumbnailBtn.addEventListener('click', () => {
+      if (state.thumbnailPanelOpen) {
+        closeThumbnailPanel();
+      } else {
+        void openThumbnailPanel();
+      }
+    });
+
+    thumbnailPanel.querySelector('.thumbnail-close')?.addEventListener('click', () => {
+      closeThumbnailPanel();
+    });
+
+    thumbnailShade.addEventListener('click', () => {
+      closeThumbnailPanel();
+    });
+
+    thumbnailGrid.addEventListener('wheel', (event) => {
+      event.stopPropagation();
+    }, { passive: true });
+
+    resetBtn.addEventListener('click', () => {
+      localStorage.removeItem(SESSION_META_KEY);
+      idbDelete('currentFile').catch(() => {});
+      idbDelete('currentFiles').catch(() => {});
+      void resetViewer();
+    });
+
+    document.addEventListener('fullscreenchange', updateTopStatus);
+    window.addEventListener('resize', onResize);
+
+    document.addEventListener('keydown', (event) => {
+      if (state.mode === 'idle') return;
+
+      if (event.key === 'ArrowLeft') {
+        void prevPage();
+        return;
+      }
+      if (event.key === 'ArrowRight') {
+        void nextPage();
+        return;
+      }
+      if (event.key === ' ') {
+        event.preventDefault();
+        void nextPage();
+        return;
+      }
+      if (event.key === 'Escape' && document.fullscreenElement) {
+        void document.exitFullscreen();
+        return;
+      }
+      if (event.key === '+' || event.key === '=') {
+        const rect = stageInner.getBoundingClientRect();
+        setZoomLevel(state.zoom + ZOOM_STEP, { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
+        return;
+      }
+      if (event.key === '-' || event.key === '_') {
+        const rect = stageInner.getBoundingClientRect();
+        setZoomLevel(state.zoom - ZOOM_STEP, { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
+      }
+    });
+
+    stageInner.addEventListener('wheel', onWheel, { passive: false });
+    stageInner.addEventListener('pointermove', onPointerMove);
+
+    // 在 document 级别也监听 pointermove，确保滑动翻页时即使手指滑出 stage 也能正常跟踪
+    document.addEventListener('pointermove', (event) => {
+      if (state.pointers.has(event.pointerId)) {
+        onPointerMove(event);
+      }
+    }, { passive: false });
+    document.addEventListener('pointerup', (event) => {
+      if (state.pointers.has(event.pointerId)) {
+        onPointerUp(event);
+      }
+    });
+    document.addEventListener('pointercancel', (event) => {
+      if (state.pointers.has(event.pointerId)) {
+        onPointerUp(event);
+      }
+    });
+
+    window.addEventListener('beforeunload', () => {
+      // 保存当前状态
+      saveSessionState();
+      stopFaceRecognition();
+      clearPdfCache();
+      revokeAllUrls();
+      if (state.pdfDoc) {
+        void state.pdfDoc.destroy();
+      }
+    });
+
+    // ============ 会话持久化 ============
+    const SESSION_DB_NAME = 'music-score-viewer-session';
+    const SESSION_DB_STORE = 'files';
+    const SESSION_META_KEY = 'music-score-viewer-meta';
+
+    const openSessionDB = () => new Promise((resolve, reject) => {
+      const req = indexedDB.open(SESSION_DB_NAME, 1);
+      req.onupgradeneeded = () => {
+        req.result.createObjectStore(SESSION_DB_STORE);
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+
+    const idbPut = async (key, value) => {
+      const db = await openSessionDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(SESSION_DB_STORE, 'readwrite');
+        tx.objectStore(SESSION_DB_STORE).put(value, key);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+    };
+
+    const idbGet = async (key) => {
+      const db = await openSessionDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(SESSION_DB_STORE, 'readonly');
+        const req = tx.objectStore(SESSION_DB_STORE).get(key);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    };
+
+    const idbDelete = async (key) => {
+      const db = await openSessionDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(SESSION_DB_STORE, 'readwrite');
+        tx.objectStore(SESSION_DB_STORE).delete(key);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+    };
+
+    const saveSessionState = () => {
+      if (state.mode === 'idle' || state.pageCount === 0) return;
+      try {
+        const meta = {
+          mode: state.mode,
+          title: state.title,
+          currentPage: state.currentPage,
+          pageCount: state.pageCount,
+          savedAt: Date.now(),
+        };
+        localStorage.setItem(SESSION_META_KEY, JSON.stringify(meta));
+      } catch (_) { /* ignore quota errors */ }
+    };
+
+    void resetViewer().then(async () => {
+      // 尝试恢复上次会话
+      let meta = null;
+      try {
+        const raw = localStorage.getItem(SESSION_META_KEY);
+        if (raw) meta = JSON.parse(raw);
+      } catch (_) { /* ignore */ }
+
+      if (!meta || !meta.mode || !meta.pageCount) return;
+
+      // 检查存储的数据是否在 24 小时内
+      if (Date.now() - (meta.savedAt || 0) > 24 * 60 * 60 * 1000) {
+        localStorage.removeItem(SESSION_META_KEY);
+        return;
+      }
+
+      try {
+        if (meta.mode === 'pdf') {
+          const buffer = await idbGet('currentFile');
+          if (!buffer) {
+            localStorage.removeItem(SESSION_META_KEY);
+            return;
+          }
+          setFooter('正在恢复上次会话...');
+          const file = new File([buffer], meta.title || 'document.pdf', { type: 'application/pdf' });
+          await setPdfSong(file);
+          // 保存文件引用以便后续恢复
+          state._restoredFileBuffer = buffer;
+        } else if (meta.mode === 'image') {
+          const buffers = await idbGet('currentFiles');
+          if (!buffers || !Array.isArray(buffers) || buffers.length === 0) {
+            localStorage.removeItem(SESSION_META_KEY);
+            return;
+          }
+          setFooter('正在恢复上次会话...');
+          const files = buffers.map((buf, i) =>
+            new File([buf], `image-${i}.jpg`, { type: 'image/jpeg' })
+          );
+          await setImageSong(files);
+        }
+
+        // 恢复页码
+        if (meta.currentPage && meta.currentPage > 1 && meta.currentPage <= state.pageCount) {
+          void goToPageInstant(meta.currentPage);
+        }
+        setFooter(`已恢复上次会话：${state.title}，第 ${state.currentPage} / ${state.pageCount} 页`);
+      } catch (e) {
+        console.warn('恢复会话失败', e);
+        localStorage.removeItem(SESSION_META_KEY);
+      }
+    });
+
+  </script>
+</body>
+</html>
+
+
+
