@@ -1,7 +1,3 @@
-<<<<<<< HEAD
-# music-score-upload-viewer
-A smart music score reader
-=======
 ﻿# 乐谱查看器（离线单入口版）
 
 这是一个离线可用的单入口项目：入口页面是 `index.html`，本地依赖统一放在 `vendor/` 子文件夹。
@@ -41,9 +37,13 @@ music-score-upload-viewer/
 ## 使用方式
 
 1. 打开 `index.html`
-![main page](671c404ed1d6616ed9c41f8bf9cdc1cc.png)
+
+  ![main page](671c404ed1d6616ed9c41f8bf9cdc1cc.png)
+
 2. 点击“上传文件”或直接拖拽文件到页面
-![example](bf5136cdcc5a5e348136b6e489995408.png)
+
+  ![example](bf5136cdcc5a5e348136b6e489995408.png)
+  
 3. 根据文件类型进行浏览：
     - 图片：单页全屏阅读，支持多图连续翻页
     - PDF：由本地 PDF.js 渲染为单页阅读视图
@@ -51,10 +51,10 @@ music-score-upload-viewer/
 4. 可选操作：
     - 点击页码显示区域输入页码跳转
     - 点击 📋 打开缩略图面板快速定位
-![缩略图](8cd870f1b31f9a99851a95be5ab5c430.png)
+  ![缩略图](8cd870f1b31f9a99851a95be5ab5c430.png)
     - 点击 “全屏” 进入沉浸式浏览
     - 点击 👁️ 打开面部识别面板并按提示启动
-![面部识别](549e8518637651734d69499bf6c989ab.png)
+  ![面部识别](549e8518637651734d69499bf6c989ab.png)
 
 ## 交互说明
 
@@ -86,4 +86,3 @@ music-score-upload-viewer/
 - 电子琴谱/纸质谱扫描件快速查看
 - 无网络环境下的临时演示
 - 需要“零部署”交付的轻量工具场景
->>>>>>> master
