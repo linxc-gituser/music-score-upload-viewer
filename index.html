@@ -3322,8 +3322,16 @@
         canvas.height = thumbViewport.height;
         const ctx = canvas.getContext('2d', { alpha: false });
         if (ctx) {
-          await page.render({ canvasContext: ctx, canvas, viewport: thumbViewport }).promise;
-          url = canvas.toDataURL('image/jpeg', 0.72);
+          const renderTask = page.render({ canvasContext: ctx, canvas, viewport: thumbViewport });
+          thumbnailRenderTasks.set(pageNumber, renderTask);
+          try {
+            await renderTask.promise;
+            url = canvas.toDataURL('image/jpeg', 0.72);
+          } finally {
+            if (thumbnailRenderTasks.get(pageNumber) === renderTask) {
+              thumbnailRenderTasks.delete(pageNumber);
+            }
+          }
         }
       }
 
@@ -3334,17 +3342,18 @@
     };
 
     let thumbnailObserver = null;
-    let thumbnailSentinel = null;
     let thumbnailSentinelObserver = null;
+    let thumbnailSentinelTop = null;
+    let thumbnailSentinelBottom = null;
 
     const buildThumbnailItem = (i, renderToken) => {
       const item = document.createElement('div');
       item.className = `thumbnail-item ${i === state.currentPage ? 'current' : ''}`;
       item.addEventListener('click', () => {
+        closeThumbnailPanel();
         if (i !== state.currentPage) {
           void goToPageInstant(i);
         }
-        closeThumbnailPanel();
       });
       item.dataset.page = String(i);
 
@@ -3368,7 +3377,170 @@
     };
 
     const BATCH_SIZE = 10;
+    const PRELOAD_BATCHES = 2;
+    let currentBatchStart = 1;
     let currentBatchEnd = 0;
+    const THUMBNAIL_FILL_MARGIN = 220;
+    let thumbnailFillRaf = 0;
+    const THUMBNAIL_RENDER_CONCURRENCY = 2;
+    const thumbnailRenderQueue = [];
+    let thumbnailRenderActive = 0;
+    const thumbnailRenderTasks = new Map();
+
+    const scheduleThumbnailWork = (task) => {
+      if ('requestIdleCallback' in window) {
+        window.requestIdleCallback(() => task(), { timeout: 300 });
+        return;
+      }
+      window.setTimeout(task, 0);
+    };
+
+    const pumpThumbnailRenderQueue = () => {
+      if (!state.thumbnailPanelOpen) return;
+      while (thumbnailRenderActive < THUMBNAIL_RENDER_CONCURRENCY && thumbnailRenderQueue.length) {
+        const job = thumbnailRenderQueue.shift();
+        if (!job || job.renderToken !== state.thumbnailRenderToken) {
+          continue;
+        }
+        thumbnailRenderActive += 1;
+        scheduleThumbnailWork(() => {
+          if (job.renderToken !== state.thumbnailRenderToken) {
+            thumbnailRenderActive = Math.max(0, thumbnailRenderActive - 1);
+            return;
+          }
+          void renderThumbnailPage(job.pageNumber)
+            .then((url) => {
+              if (job.renderToken !== state.thumbnailRenderToken) return;
+              const item = job.img.closest('.thumbnail-item');
+              if (url && job.img.isConnected) {
+                job.img.src = url;
+                job.img.style.opacity = '1';
+              }
+              if (item) {
+                if (url) {
+                  item.dataset.loaded = '1';
+                  if (thumbnailObserver) {
+                    thumbnailObserver.unobserve(item);
+                  }
+                }
+                item.dataset.pending = '';
+              }
+            })
+            .catch(() => {})
+            .finally(() => {
+              if (job.renderToken === state.thumbnailRenderToken) {
+                thumbnailRenderActive = Math.max(0, thumbnailRenderActive - 1);
+                pumpThumbnailRenderQueue();
+              }
+            });
+        });
+      }
+    };
+
+    const promoteThumbnailRender = (pageNumber) => {
+      const index = thumbnailRenderQueue.findIndex((job) => job.pageNumber === pageNumber);
+      if (index > 0) {
+        const [job] = thumbnailRenderQueue.splice(index, 1);
+        thumbnailRenderQueue.unshift(job);
+      }
+    };
+
+    const enqueueThumbnailRender = (pageNumber, img, renderToken, priority = 'normal') => {
+      if (renderToken !== state.thumbnailRenderToken) return;
+      if (thumbnailRenderTasks.has(pageNumber)) return;
+
+      const existingIndex = thumbnailRenderQueue.findIndex((job) => job.pageNumber === pageNumber);
+      if (existingIndex >= 0) {
+        const [job] = thumbnailRenderQueue.splice(existingIndex, 1);
+        if (priority === 'high') {
+          thumbnailRenderQueue.unshift(job);
+        } else {
+          thumbnailRenderQueue.push(job);
+        }
+        pumpThumbnailRenderQueue();
+        return;
+      }
+
+      const job = { pageNumber, img, renderToken };
+      if (priority === 'high') {
+        thumbnailRenderQueue.unshift(job);
+      } else {
+        thumbnailRenderQueue.push(job);
+      }
+      pumpThumbnailRenderQueue();
+    };
+
+    const cancelThumbnailRenders = () => {
+      thumbnailRenderQueue.length = 0;
+      thumbnailRenderActive = 0;
+      thumbnailRenderTasks.forEach((task) => {
+        try {
+          task.cancel();
+        } catch (_) {
+          /* ignore */
+        }
+      });
+      thumbnailRenderTasks.clear();
+    };
+
+    const createThumbnailSentinel = (position) => {
+      const node = document.createElement('div');
+      node.dataset.pos = position;
+      node.style.height = '1px';
+      node.style.width = '100%';
+      return node;
+    };
+
+    const shouldLoadPrevThumbnails = () => {
+      if (!state.thumbnailPanelOpen) return false;
+      if (currentBatchStart <= 1) return false;
+      return thumbnailGrid.scrollTop < THUMBNAIL_FILL_MARGIN;
+    };
+
+    const shouldLoadNextThumbnails = () => {
+      if (!state.thumbnailPanelOpen) return false;
+      if (currentBatchEnd >= state.pageCount) return false;
+      const remaining = thumbnailGrid.scrollHeight - thumbnailGrid.scrollTop - thumbnailGrid.clientHeight;
+      return remaining < THUMBNAIL_FILL_MARGIN;
+    };
+
+    const syncThumbnailSentinels = (renderToken) => {
+      if (renderToken !== state.thumbnailRenderToken) return;
+
+      if (currentBatchStart > 1) {
+        if (!thumbnailSentinelTop) {
+          thumbnailSentinelTop = createThumbnailSentinel('top');
+        }
+        if (!thumbnailSentinelTop.parentNode) {
+          thumbnailGrid.insertBefore(thumbnailSentinelTop, thumbnailGrid.firstChild);
+        }
+        if (thumbnailSentinelObserver) {
+          thumbnailSentinelObserver.observe(thumbnailSentinelTop);
+        }
+      } else if (thumbnailSentinelTop && thumbnailSentinelTop.parentNode) {
+        if (thumbnailSentinelObserver) {
+          thumbnailSentinelObserver.unobserve(thumbnailSentinelTop);
+        }
+        thumbnailSentinelTop.remove();
+      }
+
+      if (currentBatchEnd < state.pageCount) {
+        if (!thumbnailSentinelBottom) {
+          thumbnailSentinelBottom = createThumbnailSentinel('bottom');
+        }
+        if (!thumbnailSentinelBottom.parentNode) {
+          thumbnailGrid.appendChild(thumbnailSentinelBottom);
+        }
+        if (thumbnailSentinelObserver) {
+          thumbnailSentinelObserver.observe(thumbnailSentinelBottom);
+        }
+      } else if (thumbnailSentinelBottom && thumbnailSentinelBottom.parentNode) {
+        if (thumbnailSentinelObserver) {
+          thumbnailSentinelObserver.unobserve(thumbnailSentinelBottom);
+        }
+        thumbnailSentinelBottom.remove();
+      }
+    };
 
     const addNextBatch = (renderToken) => {
       const start = currentBatchEnd + 1;
@@ -3381,34 +3553,80 @@
       }
 
       // 移除哨兵（如果有），添加新项目，再添加哨兵
-      if (thumbnailSentinel && thumbnailSentinel.parentNode) {
-        thumbnailGrid.insertBefore(fragment, thumbnailSentinel);
+      if (thumbnailSentinelBottom && thumbnailSentinelBottom.parentNode) {
+        thumbnailGrid.insertBefore(fragment, thumbnailSentinelBottom);
       } else {
         thumbnailGrid.appendChild(fragment);
       }
 
+      currentBatchStart = Math.min(currentBatchStart, start);
       currentBatchEnd = end;
+      syncThumbnailSentinels(renderToken);
+    };
 
-      // 如果还有更多页面，添加哨兵元素
-      if (currentBatchEnd < state.pageCount) {
-        if (!thumbnailSentinel) {
-          thumbnailSentinel = document.createElement('div');
-          thumbnailSentinel.style.height = '1px';
-          thumbnailSentinel.style.width = '100%';
-        }
-        thumbnailGrid.appendChild(thumbnailSentinel);
-        if (thumbnailSentinelObserver) {
-          thumbnailSentinelObserver.observe(thumbnailSentinel);
-        }
-      } else if (thumbnailSentinelObserver) {
-        thumbnailSentinelObserver.disconnect();
+    const addPrevBatch = (renderToken) => {
+      const end = currentBatchStart - 1;
+      const start = Math.max(1, end - BATCH_SIZE + 1);
+      if (end < start || renderToken !== state.thumbnailRenderToken) return;
+
+      const prevScrollHeight = thumbnailGrid.scrollHeight;
+      const prevScrollTop = thumbnailGrid.scrollTop;
+
+      const fragment = document.createDocumentFragment();
+      for (let i = start; i <= end; i++) {
+        fragment.appendChild(buildThumbnailItem(i, renderToken));
       }
+
+      if (thumbnailSentinelTop && thumbnailSentinelTop.parentNode) {
+        thumbnailGrid.insertBefore(fragment, thumbnailSentinelTop.nextSibling);
+      } else if (thumbnailGrid.firstChild) {
+        thumbnailGrid.insertBefore(fragment, thumbnailGrid.firstChild);
+      } else {
+        thumbnailGrid.appendChild(fragment);
+      }
+
+      currentBatchStart = start;
+      syncThumbnailSentinels(renderToken);
+
+      const nextScrollHeight = thumbnailGrid.scrollHeight;
+      thumbnailGrid.scrollTop = prevScrollTop + (nextScrollHeight - prevScrollHeight);
+    };
+
+    const ensureThumbnailFill = (renderToken) => {
+      if (thumbnailFillRaf) return;
+      thumbnailFillRaf = window.requestAnimationFrame(() => {
+        thumbnailFillRaf = 0;
+        if (renderToken !== state.thumbnailRenderToken) return;
+        let guard = 0;
+        while ((shouldLoadPrevThumbnails() || shouldLoadNextThumbnails()) && guard < 6) {
+          if (shouldLoadPrevThumbnails()) {
+            addPrevBatch(renderToken);
+          }
+          if (shouldLoadNextThumbnails()) {
+            addNextBatch(renderToken);
+          }
+          guard += 1;
+        }
+        if ((shouldLoadPrevThumbnails() || shouldLoadNextThumbnails()) && renderToken === state.thumbnailRenderToken) {
+          ensureThumbnailFill(renderToken);
+        }
+      });
+    };
+
+    const scrollThumbnailToCurrent = () => {
+      const item = thumbnailGrid.querySelector(`[data-page="${state.currentPage}"]`);
+      if (!item) return;
+      const itemHeight = item.getBoundingClientRect().height || 0;
+      const targetTop = item.offsetTop - (thumbnailGrid.clientHeight - itemHeight) / 2;
+      const maxTop = Math.max(0, thumbnailGrid.scrollHeight - thumbnailGrid.clientHeight);
+      thumbnailGrid.scrollTop = clamp(targetTop, 0, maxTop);
     };
 
     const buildThumbnailGrid = async () => {
       if (state.mode === 'idle') return;
 
       thumbnailGrid.innerHTML = '';
+      currentBatchStart = 1;
       currentBatchEnd = 0;
       const renderToken = ++state.thumbnailRenderToken;
 
@@ -3420,26 +3638,50 @@
         thumbnailSentinelObserver.disconnect();
       }
 
+      cancelThumbnailRenders();
+      thumbnailSentinelTop = null;
+      thumbnailSentinelBottom = null;
+
       // 缩略图图像懒加载观察器
       thumbnailObserver = new IntersectionObserver(
         (entries) => {
+          const queueCandidates = [];
+          let rootCenter = null;
           for (const entry of entries) {
             if (!entry.isIntersecting) continue;
             const item = entry.target;
             const pageNumber = Number(item.dataset.page || 0);
-            if (!pageNumber || item.dataset.loaded === '1') continue;
-            item.dataset.loaded = '1';
-            const img = item.querySelector('img');
-            if (img) {
-              void renderThumbnailPage(pageNumber).then((url) => {
-                if (renderToken !== state.thumbnailRenderToken) return;
-                if (url) {
-                  img.src = url;
-                  img.style.opacity = '1';
-                }
-              });
+            if (!pageNumber) continue;
+            if (item.dataset.loaded === '1') {
+              thumbnailObserver.unobserve(item);
+              continue;
             }
-            thumbnailObserver.unobserve(item);
+            if (item.dataset.pending === '1') {
+              promoteThumbnailRender(pageNumber);
+              continue;
+            }
+            if (thumbnailRenderTasks.has(pageNumber)) {
+              continue;
+            }
+            const img = item.querySelector('img');
+            if (!img) continue;
+
+            item.dataset.pending = '1';
+            if (rootCenter === null) {
+              const rootBounds = entry.rootBounds || thumbnailGrid.getBoundingClientRect();
+              rootCenter = (rootBounds.top + rootBounds.bottom) / 2;
+            }
+            const bounds = entry.boundingClientRect;
+            const entryCenter = (bounds.top + bounds.bottom) / 2;
+            const distance = rootCenter === null ? 0 : Math.abs(entryCenter - rootCenter);
+            queueCandidates.push({ pageNumber, img, distance });
+          }
+
+          if (queueCandidates.length) {
+            queueCandidates.sort((a, b) => b.distance - a.distance);
+            queueCandidates.forEach((candidate) => {
+              enqueueThumbnailRender(candidate.pageNumber, candidate.img, renderToken, 'high');
+            });
           }
         },
         { root: thumbnailGrid, rootMargin: '120px 0px', threshold: 0.01 },
@@ -3453,20 +3695,34 @@
 
       thumbnailGrid.style.gridTemplateColumns = `repeat(${colCount}, minmax(0, 1fr))`;
 
-      // 先创建哨兵观察器，再渲染第一批（addNextBatch 内部需要它来观察哨兵）
+      // 先创建哨兵观察器，再渲染初始窗口
       thumbnailSentinelObserver = new IntersectionObserver(
         (entries) => {
           for (const entry of entries) {
-            if (entry.isIntersecting && renderToken === state.thumbnailRenderToken) {
+            if (!entry.isIntersecting || renderToken !== state.thumbnailRenderToken) continue;
+            if (entry.target === thumbnailSentinelTop) {
+              addPrevBatch(renderToken);
+            } else if (entry.target === thumbnailSentinelBottom) {
               addNextBatch(renderToken);
             }
+            ensureThumbnailFill(renderToken);
           }
         },
         { root: thumbnailGrid, rootMargin: '200px 0px', threshold: 0.01 },
       );
 
-      // 渲染第一批
-      addNextBatch(renderToken);
+      const targetStart = Math.max(1, state.currentPage - PRELOAD_BATCHES * BATCH_SIZE);
+      const targetEnd = Math.min(state.pageCount, state.currentPage + PRELOAD_BATCHES * BATCH_SIZE);
+      currentBatchStart = targetStart;
+      currentBatchEnd = targetStart - 1;
+      while (currentBatchEnd < targetEnd) {
+        addNextBatch(renderToken);
+      }
+
+      window.requestAnimationFrame(() => {
+        scrollThumbnailToCurrent();
+        ensureThumbnailFill(renderToken);
+      });
     };
 
     const openThumbnailPanel = async () => {
@@ -3486,13 +3742,21 @@
     const closeThumbnailPanel = () => {
       state.thumbnailPanelOpen = false;
       state.thumbnailRenderToken += 1;
+      if (thumbnailFillRaf) {
+        window.cancelAnimationFrame(thumbnailFillRaf);
+        thumbnailFillRaf = 0;
+      }
       if (thumbnailObserver) {
         thumbnailObserver.disconnect();
       }
       if (thumbnailSentinelObserver) {
         thumbnailSentinelObserver.disconnect();
       }
+      cancelThumbnailRenders();
+      currentBatchStart = 1;
       currentBatchEnd = 0;
+      thumbnailSentinelTop = null;
+      thumbnailSentinelBottom = null;
       thumbnailShade.classList.remove('open');
       thumbnailPanel.classList.remove('open');
       thumbnailShade.setAttribute('aria-hidden', 'true');
@@ -3667,6 +3931,12 @@
 
     thumbnailGrid.addEventListener('wheel', (event) => {
       event.stopPropagation();
+    }, { passive: true });
+
+    thumbnailGrid.addEventListener('scroll', () => {
+      if (state.thumbnailPanelOpen) {
+        ensureThumbnailFill(state.thumbnailRenderToken);
+      }
     }, { passive: true });
 
     resetBtn.addEventListener('click', () => {
