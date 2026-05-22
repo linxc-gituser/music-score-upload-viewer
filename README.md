@@ -34,6 +34,10 @@ music-score-upload-viewer/
   README.md
 ```
 
+## 文档导航
+
+- [Principle of Facial Recognition.md](Principle%20of%20Facial%20Recognition.md)
+
 ## 使用方式
 
 1. 打开 `index.html`
